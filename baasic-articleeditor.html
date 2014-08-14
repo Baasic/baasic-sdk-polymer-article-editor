@@ -1,0 +1,124 @@
+﻿<link rel="import" href="../baasic-ajax/baasic-ajax.html">
+<link rel="import" href="../baasic-globals/baasic-globals.html">
+<link rel="import" href="../baasic-htmleditor/baasic-htmleditor.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<polymer-element name="baasic-articleeditor" attributes="baseUrl version application slug value">
+    <template>
+        <style>
+            :host {
+                display: block;
+            }
+        </style>
+        <div id="container">
+            <template bind if="{{!baasicUser.accessToken}}">
+                {{response.content}}
+            </template>
+
+            <template bind if="{{baasicUser.accessToken}}">
+                <div id="editorBox" vertical layout>
+                    <div>
+                        <paper-input id="txtTitle" label="Article title"></paper-input>
+                    </div>
+                    <div>
+                        <baasic-htmleditor id="htmlEditor" value=""><content></content></baasic-htmleditor>
+                    </div>
+                    <div>
+                        <paper-button on-click="{{saveChanges}}" label="Save" raisedbutton></paper-button>
+                    </div>
+                </div>
+
+        </div>
+        </div>
+    </template>
+    <baasic-globals id="globals"></baasic-globals>
+    <baasic-ajax id="axGet" auto
+                 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}"
+                 params='{"embed":"Authors,Tags"}'
+                 handleAs="json"
+                 contentType="application/json"
+                 method="GET"
+                 response="{{response}}"
+                 on-core-response="{{handleGet}}"
+                 on-core-error="{{handleGetError}}"
+                 ></baasic-ajax>
+    <baasic-ajax id="axPost"
+                 url="{{baseUrl}}/{{version}}/{{application}}/article/"
+                 handleAs="json"
+                 method="POST"
+                 contentType="application/json"
+                 response="{{postResponse}}"></baasic-ajax>
+    <baasic-ajax id="axPut"
+                 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
+                 method="PUT"
+                 contentType="application/json"
+                 handleAs="json"
+                 response="{{putResponse}}"></baasic-ajax>
+
+
+    </template>
+    <script>
+        Polymer('baasic-articleeditor', {
+            baseUrl: "http://api.baasic.local",
+            version: "beta",
+            application: "",
+            slug: "",
+            response: {},
+            articleExists: true,
+            responseChanged: function (oldValue, newValue) {
+            },
+            ready: function () {
+                this.baasicUser = this.$.globals.baasicUser;
+            },
+            domReady: function() {
+                
+            },
+            handleGet: function(e)
+            {
+                this.response = e.detail.response;
+                this.$.container.querySelector('#htmlEditor').setData(this.response.content);
+                this.$.container.querySelector('#txtTitle').value = this.response.title;
+            },
+            handleGetError: function (e) {
+                this.articleExists = false; console.log(this.articleExists);
+            },
+            saveChanges: function (e) {
+                //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
+                //console.log(this.$.container.querySelector('#contentEditor').getDistributedNodes()[0]);
+                //var content = CKEDITOR.instances.editor1.getData();
+                var content = this.$.container.querySelector('#htmlEditor').getData();
+                var title = this.$.container.querySelector('#txtTitle').value;
+                var article = {
+                    title: title,
+                    content: content,
+                    allowComments: "false",
+                    status: "2",
+                    publishDate: new Date(),
+                    slug: String.slugify(title)
+                };
+                var ax = {};
+                if (this.articleExists)
+                    ax = this.$.axPut;
+                else
+                {
+                    ax = this.$.axPost;
+                    this.articleExists = true;
+                }
+
+                ax.body = JSON.stringify(article);
+                console.log(ax.body);
+                ax.go();
+                
+                this.fire('onSave', { title: title, content: content });
+            }
+        });
+    </script>
+</polymer-element>
+
+
+<script>
+    //to handle the events fired from the web components...
+    //document.querySelector('baasic-articleeditor').addEventListener('onSave', function (e) {
+    //    console.log(e);
+    //});
+</script>

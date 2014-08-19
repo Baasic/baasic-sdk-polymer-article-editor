@@ -1,4 +1,5 @@
-﻿<link rel="import" href="../baasic-ajax/baasic-ajax.html">
+﻿<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../baasic-ajax/baasic-ajax.html">
 <link rel="import" href="../baasic-globals/baasic-globals.html">
 <link rel="import" href="../baasic-htmleditor/baasic-htmleditor.html">
 <link rel="import" href="../paper-input/paper-input.html">
@@ -27,33 +28,33 @@
                         <paper-button on-click="{{saveChanges}}" label="Save" raisedbutton></paper-button>
                     </div>
                 </div>
-
-        </div>
-
-    <baasic-globals id="globals"></baasic-globals>
-    <baasic-ajax id="axGet" auto
-                 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}"
-                 params='{"embed":"Authors,Tags"}'
-                 handleAs="json"
-                 contentType="application/json"
-                 method="GET"
-                 response="{{response}}"
-                 on-core-response="{{handleGet}}"
-                 on-core-error="{{handleGetError}}"
-                 ></baasic-ajax>
-    <baasic-ajax id="axPost"
-                 url="{{baseUrl}}/{{version}}/{{application}}/article/"
-                 handleAs="json"
-                 method="POST"
-                 contentType="application/json"
-                 response="{{postResponse}}"></baasic-ajax>
-    <baasic-ajax id="axPut"
-                 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
-                 method="PUT"
-                 contentType="application/json"
-                 handleAs="json"
-                 response="{{putResponse}}"></baasic-ajax>
-
+			</template>
+			
+		
+		</div>
+		<baasic-globals id="globals"></baasic-globals>
+		<baasic-ajax id="axGet" auto
+					 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}"
+					 params='{"embed":"Authors,Tags"}'
+					 handleAs="json"
+					 contentType="application/json"
+					 method="GET"
+					 response="{{response}}"
+					 on-core-response="{{handleGet}}"
+					 on-core-error="{{handleGetError}}"
+					 ></baasic-ajax>
+		<baasic-ajax id="axPost"
+					 url="{{baseUrl}}/{{version}}/{{application}}/article/"
+					 handleAs="json"
+					 method="POST"
+					 contentType="application/json"
+					 response="{{postResponse}}"></baasic-ajax>
+		<baasic-ajax id="axPut"
+					 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
+					 method="PUT"
+					 contentType="application/json"
+					 handleAs="json"
+					 response="{{putResponse}}"></baasic-ajax>
 
     </template>
     <script>
@@ -67,7 +68,7 @@
             responseChanged: function (oldValue, newValue) {
             },
             ready: function () {
-                this.baasicUser = this.$.globals.baasicUser;
+				this.baasicUser = this.$.globals.baasicUser;
             },
             domReady: function() {
                 
@@ -75,7 +76,7 @@
             handleGet: function(e)
             {
                 this.response = e.detail.response; 
-                this.$.container.querySelector('#htmlEditor').setData(this.response.content);
+				this.$.container.querySelector('#htmlEditor').setData(this.response.content);
                 this.$.container.querySelector('#txtTitle').value = this.response.title;
             },
             handleGetError: function (e) {
@@ -83,8 +84,6 @@
             },
             saveChanges: function (e) {
                 //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
-                //console.log(this.$.container.querySelector('#contentEditor').getDistributedNodes()[0]);
-                //var content = CKEDITOR.instances.editor1.getData();
                 var content = this.$.container.querySelector('#htmlEditor').getData();
                 var title = this.$.container.querySelector('#txtTitle').value;
                 var article = {
@@ -105,7 +104,6 @@
                 }
 
                 ax.body = JSON.stringify(article);
-                //console.log(ax.body);
                 ax.go();
                 
                 this.fire('onSave', { title: title, content: content });
@@ -115,9 +113,3 @@
 </polymer-element>
 
 
-<script>
-    //to handle the events fired from the web components...
-    //document.querySelector('baasic-articleeditor').addEventListener('onSave', function (e) {
-    //    console.log(e);
-    //});
-</script>

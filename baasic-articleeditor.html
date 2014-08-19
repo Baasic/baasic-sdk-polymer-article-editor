@@ -29,8 +29,7 @@
                 </div>
 
         </div>
-        </div>
-    </template>
+
     <baasic-globals id="globals"></baasic-globals>
     <baasic-ajax id="axGet" auto
                  url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}"
@@ -75,12 +74,12 @@
             },
             handleGet: function(e)
             {
-                this.response = e.detail.response;
+                this.response = e.detail.response; 
                 this.$.container.querySelector('#htmlEditor').setData(this.response.content);
                 this.$.container.querySelector('#txtTitle').value = this.response.title;
             },
             handleGetError: function (e) {
-                this.articleExists = false; console.log(this.articleExists);
+                this.articleExists = false; 
             },
             saveChanges: function (e) {
                 //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
@@ -106,7 +105,7 @@
                 }
 
                 ax.body = JSON.stringify(article);
-                console.log(ax.body);
+                //console.log(ax.body);
                 ax.go();
                 
                 this.fire('onSave', { title: title, content: content });

@@ -4,6 +4,8 @@
 <link rel="import" href="../baasic-htmleditor/baasic-htmleditor.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../core-signals/core-signals.html">
+
 <polymer-element name="baasic-articleeditor" attributes="baseUrl version application slug value">
     <template>
         <style>
@@ -55,7 +57,7 @@
 					 contentType="application/json"
 					 handleAs="json"
 					 response="{{putResponse}}"></baasic-ajax>
-
+        <core-signals on-core-signal-user-login="{{loginChanged}}"></core-signals>
     </template>
     <script>
         Polymer('baasic-articleeditor', {
@@ -65,19 +67,20 @@
             slug: "",
             response: {},
             articleExists: true,
-            responseChanged: function (oldValue, newValue) {
-            },
             ready: function () {
-				this.baasicUser = this.$.globals.baasicUser;
+                this.baasicUser = this.$.globals.baasicUser;
             },
-            domReady: function() {
-                
+            loginChanged: function(data) {
+                this.baasicUser = this.$.globals.baasicUser;
+                this.$.axGet.go();
             },
             handleGet: function(e)
             {
-                this.response = e.detail.response; 
-				this.$.container.querySelector('#htmlEditor').setData(this.response.content);
-                this.$.container.querySelector('#txtTitle').value = this.response.title;
+                this.response = e.detail.response;
+                if (this.$.container.querySelector('#htmlEditor'))
+				    this.$.container.querySelector('#htmlEditor').setData(this.response.content);
+                if (this.$.container.querySelector('#txtTitle'))
+                    this.$.container.querySelector('#txtTitle').value = this.response.title;
             },
             handleGetError: function (e) {
                 this.articleExists = false; 

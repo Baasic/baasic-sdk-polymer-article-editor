@@ -1,10 +1,13 @@
 ﻿<link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../baasic-ajax/baasic-ajax.html">
+<link rel="import" href="../baasic-crud/baasic-crud.html">
 <link rel="import" href="../baasic-globals/baasic-globals.html">
 <link rel="import" href="../baasic-htmleditor/baasic-htmleditor.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-checkbox/paper-checkbox.html">
 <link rel="import" href="../core-signals/core-signals.html">
+
 
 <polymer-element name="baasic-articleeditor" attributes="baseUrl version application slug value">
     <template>
@@ -12,10 +15,14 @@
             :host {
                 display: block;
             }
+
+            paper-checkbox {
+                padding: 20px 20px 20px 0;
+            }
         </style>
         <div id="container">
             <template bind if="{{!baasicUser.accessToken}}">
-                {{response.content}}
+                You are not allowed to access this section. Please check your login information or contact the administrator to obtain the right credentials.
             </template>
 
             <template bind if="{{baasicUser.accessToken}}">
@@ -26,38 +33,42 @@
                     <div>
                         <baasic-htmleditor id="htmlEditor" value=""><content></content></baasic-htmleditor>
                     </div>
+                    <div id="rolesList" vertical layout>
+                        <div>Who can view this content?</div>
+                        <template repeat="{{ role in roles }}">
+                            <div horizontal layout>
+                                <paper-checkbox name="cbRead" id="{{role.id}}"></paper-checkbox>
+                                <div>{{ role.name }}</div>
+                            </div>
+                        </template>
+                    </div>
                     <div>
                         <paper-button on-click="{{saveChanges}}" label="Save" raisedbutton></paper-button>
                     </div>
                 </div>
-			</template>
-			
-		
-		</div>
-		<baasic-globals id="globals"></baasic-globals>
-		<baasic-ajax id="axGet" auto
-					 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}"
-					 params='{"embed":"Authors,Tags"}'
-					 handleAs="json"
-					 contentType="application/json"
-					 method="GET"
-					 response="{{response}}"
-					 on-core-response="{{handleGet}}"
-					 on-core-error="{{handleGetError}}"
-					 ></baasic-ajax>
-		<baasic-ajax id="axPost"
-					 url="{{baseUrl}}/{{version}}/{{application}}/article/"
-					 handleAs="json"
-					 method="POST"
-					 contentType="application/json"
-					 response="{{postResponse}}"></baasic-ajax>
-		<baasic-ajax id="axPut"
-					 url="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
-					 method="PUT"
-					 contentType="application/json"
-					 handleAs="json"
-					 response="{{putResponse}}"></baasic-ajax>
+            </template>
+
+
+        </div>
+        <baasic-globals id="globals"></baasic-globals>
+
         <core-signals on-core-signal-user-login="{{loginChanged}}"></core-signals>
+
+        <baasic-crud id="crudElement" 
+                     geturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}" 
+                     posturl="{{baseUrl}}/{{version}}/{{application}}/article/" 
+                     puturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/" 
+                     deleteurl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/" 
+                     on-get-completed="{{handleGetCompleted}}" 
+                     on-get-error="{{handleGetError}}"></baasic-crud>
+
+        <baasic-ajax id="axRoles"
+                     url="{{baseUrl}}/{{version}}/{{application}}/role/?rpp=100&sort=Name|asc"
+                     handleas="json"
+                     contenttype="application/json"
+                     method="GET"
+                     on-core-response="{{handleGetRolesCompleted}}"
+                     on-core-error="{{handleGetRolesError}}"></baasic-ajax>
     </template>
     <script>
         Polymer('baasic-articleeditor', {
@@ -66,24 +77,32 @@
             application: "",
             slug: "",
             response: {},
+            roles: {},
             articleExists: true,
             ready: function () {
                 this.baasicUser = this.$.globals.baasicUser;
+                this.$.axRoles.go();
+                this.crud = this.$.crudElement;
+                this.crud.get({ embed: "Authors,Tags" });
             },
-            loginChanged: function(data) {
+            loginChanged: function (data) {
                 this.baasicUser = this.$.globals.baasicUser;
-                this.$.axGet.go();
+                this.crud.get({ embed: "Authors,Tags" });
             },
-            handleGet: function(e)
-            {
+            handleGetCompleted: function (e) {
                 this.response = e.detail.response;
                 if (this.$.container.querySelector('#htmlEditor'))
-				    this.$.container.querySelector('#htmlEditor').setData(this.response.content);
+                    this.$.container.querySelector('#htmlEditor').setData(this.response.content);
                 if (this.$.container.querySelector('#txtTitle'))
                     this.$.container.querySelector('#txtTitle').value = this.response.title;
             },
             handleGetError: function (e) {
-                this.articleExists = false; 
+                this.articleExists = false;
+            },
+            handleGetRolesCompleted: function (e) {
+                this.roles = e.detail.response.item;
+            },
+            handleGetRolesError: function (e) {
             },
             saveChanges: function (e) {
                 //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
@@ -95,20 +114,26 @@
                     allowComments: "false",
                     status: "2",
                     publishDate: new Date(),
-                    slug: String.slugify(title)
+                    slug: String.slugify(title),
+                    permissions: [
+                        {
+                            actionId: "1fcc74f9-8d49-43b4-8d6a-a365011ad3f7",
+                            roleId: "a5585691-b02e-47fa-be4c-a365011ad38c"
+                        }
+                    ]
                 };
-                var ax = {};
+                var body = JSON.stringify(article);
                 if (this.articleExists)
-                    ax = this.$.axPut;
-                else
-                {
-                    ax = this.$.axPost;
+                    this.crud.put(null, body);
+                else {
+                    this.crud.post(null, body);
                     this.articleExists = true;
                 }
-
-                ax.body = JSON.stringify(article);
-                ax.go();
-                
+                //parsing roles
+                var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
+                for (i = 0; i < cbs.length; i++) {
+                    console.log(cbs[i].checked + "-" + cbs[i].id);
+                }
                 this.fire('onSave', { title: title, content: content });
             }
         });

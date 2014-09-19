@@ -2,7 +2,7 @@
 <link rel="import" href="../baasic-ajax/baasic-ajax.html">
 <link rel="import" href="../baasic-crud/baasic-crud.html">
 <link rel="import" href="../baasic-globals/baasic-globals.html">
-<link rel="import" href="../baasic-htmleditor/baasic-htmleditor.html">
+<link rel="import" href="../markdown-editor/markdown-editor.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-checkbox/paper-checkbox.html">
@@ -21,17 +21,17 @@
             }
         </style>
         <div id="container">
-            <template bind if="{{!baasicUser.accessToken}}">
+            <template bind if="{{!baasicUser.isAdmin}}">
                 You are not allowed to access this section. Please check your login information or contact the administrator to obtain the right credentials.
             </template>
 
-            <template bind if="{{baasicUser.accessToken}}">
+            <template bind if="{{baasicUser.isAdmin}}">
                 <div id="editorBox" vertical layout>
                     <div>
                         <paper-input id="txtTitle" label="Article title"></paper-input>
                     </div>
                     <div>
-                        <baasic-htmleditor id="htmlEditor" value=""><content></content></baasic-htmleditor>
+                        <markdown-editor id="editor"></markdown-editor>
                     </div>
                     <div id="rolesList" vertical layout>
                         <div>Who can view this content?</div>
@@ -80,19 +80,24 @@
             roles: {},
             articleExists: true,
             ready: function () {
+                //pick up the user from the local storage
                 this.baasicUser = this.$.globals.baasicUser;
+                //this.isAdmin = this.$.globals.isAdmin();
+                //load all available roles from the system, as they will be shown in checkbox lists
                 this.$.axRoles.go();
                 this.crud = this.$.crudElement;
+                //get the article
                 this.crud.get({ embed: "Authors,Tags" });
             },
             loginChanged: function (data) {
                 this.baasicUser = this.$.globals.baasicUser;
+                //this.isAdmin = this.$.globals.isAdmin();
                 this.crud.get({ embed: "Authors,Tags" });
             },
             handleGetCompleted: function (e) {
                 this.response = e.detail.response;
-                if (this.$.container.querySelector('#htmlEditor'))
-                    this.$.container.querySelector('#htmlEditor').setData(this.response.content);
+                if (this.$.container.querySelector('#editor'))
+                    this.$.container.querySelector('#editor').value = this.response.content;
                 if (this.$.container.querySelector('#txtTitle'))
                     this.$.container.querySelector('#txtTitle').value = this.response.title;
             },
@@ -106,7 +111,7 @@
             },
             saveChanges: function (e) {
                 //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
-                var content = this.$.container.querySelector('#htmlEditor').getData();
+                var content = this.$.container.querySelector('#editor').value;
                 var title = this.$.container.querySelector('#txtTitle').value;
                 var article = {
                     title: title,

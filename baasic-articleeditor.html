@@ -41,6 +41,13 @@
                                 <div>{{ role.name }}</div>
                             </div>
                         </template>
+                        <div>Who can edit this content?</div>
+                        <template repeat="{{ role in roles }}">
+                            <div horizontal layout>
+                                <paper-checkbox name="cbEdit" id="{{role.id}}"></paper-checkbox>
+                                <div>{{ role.name }}</div>
+                            </div>
+                        </template>
                     </div>
                     <template bind if="{{!hideSaveButton}}">
                         <div>
@@ -57,12 +64,12 @@
         <core-signals on-core-signal-user-login="{{loginChanged}}"></core-signals>
 
         <baasic-crud id="crudElement"
-                     geturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}"
+                     geturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
                      posturl="{{baseUrl}}/{{version}}/{{application}}/article/"
                      puturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
                      deleteurl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
-                     on-get-completed="{{handleGetCompleted}}"
-                     on-get-error="{{handleGetError}}"></baasic-crud>
+                     on-get-completed="{{handleCrudCompleted}}"
+                     on-get-error="{{handleCrudError}}"></baasic-crud>
 
         <baasic-ajax id="axRoles"
                      url="{{baseUrl}}/{{version}}/{{application}}/role/?rpp=100&sort=Name|asc"
@@ -71,45 +78,71 @@
                      method="GET"
                      on-core-response="{{handleGetRolesCompleted}}"
                      on-core-error="{{handleGetRolesError}}"></baasic-ajax>
+
+        <baasic-ajax id="axActions"
+                     url="{{baseUrl}}/{{version}}/{{application}}/lookup/?embed=accessAction"
+                     handleas="json"
+                     contenttype="application/json"
+                     method="GET"
+                     on-core-response="{{handleGetActionsCompleted}}"
+                     on-core-error="{{handleGetActionsError}}"></baasic-ajax>
+
     </template>
     <script>
         Polymer('baasic-articleeditor', {
-            baseUrl: "http://api.baasic.local",
-            version: "beta",
-            application: "",
             slug: "",
             response: {},
             roles: {},
             articleExists: true,
             ready: function () {
+                this.globals = this.$.globals;
+                if (!this.baseUrl) this.baseUrl = this.globals.config.baseUrl;
+                if (!this.version) this.version = this.globals.config.version;
+                if (!this.application) this.application = this.globals.config.application;
+
                 //pick up the user from the local storage
-                this.baasicUser = this.$.globals.baasicUser;
-                //this.isAdmin = this.$.globals.isAdmin();
+                this.baasicUser = this.globals.baasicUser;
                 //load all available roles from the system, as they will be shown in checkbox lists
                 this.$.axRoles.go();
+                //load the access actions
+                this.$.axActions.go();
+
                 this.crud = this.$.crudElement;
                 //get the article
                 this.crud.get({ embed: "Authors,Tags" });
             },
             loginChanged: function (data) {
-                this.baasicUser = this.$.globals.baasicUser;
-                //this.isAdmin = this.$.globals.isAdmin();
+                this.baasicUser = this.globals.baasicUser;
                 this.crud.get({ embed: "Authors,Tags" });
             },
-            handleGetCompleted: function (e) {
+            handleCrudCompleted: function (e) {
                 this.response = e.detail.response;
+                console.log(this.response);
                 if (this.$.container.querySelector('#editor'))
                     this.$.container.querySelector('#editor').value = this.response.content;
                 if (this.$.container.querySelector('#txtTitle'))
                     this.$.container.querySelector('#txtTitle').value = this.response.title;
+                this.displayRoles(this.response.permissions);
+
             },
-            handleGetError: function (e) {
+            handleCrudError: function (e) {
                 this.articleExists = false;
             },
             handleGetRolesCompleted: function (e) {
                 this.roles = e.detail.response.item;
             },
             handleGetRolesError: function (e) {
+                console.log(e.detail.response);
+            },
+            handleGetActionsCompleted: function (e) {
+                this.accessActions = {};
+                var actions = e.detail.response.accessAction;
+                for (var i = 0, len = actions.length; i < len; i++) {
+                    this.accessActions[actions[i].abrv] = actions[i];
+                }
+            },
+            handleGetActionsError: function (e) {
+                console.log(e.detail.response);
             },
             saveChanges: function (e) {
                 //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
@@ -122,12 +155,7 @@
                     status: "2",
                     publishDate: new Date(),
                     slug: String.slugify(title),
-                    permissions: [
-                        {
-                            actionId: "1fcc74f9-8d49-43b4-8d6a-a365011ad3f7",
-                            roleId: "a5585691-b02e-47fa-be4c-a365011ad38c"
-                        }
-                    ]
+                    permissions: this.parseRoles()
                 };
                 var body = JSON.stringify(article);
                 if (this.articleExists)
@@ -136,12 +164,43 @@
                     this.crud.post(null, body);
                     this.articleExists = true;
                 }
+                this.fire('article-save', { title: title, content: content });
+            },
+            displayRoles: function(permissions) {
+                var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
+                var readAction = this.accessActions['Read'];
+                for (i = 0; i < cbs.length; i++) {
+                    var exists = permissions.filter(function (p) {
+                        return p.actionId === readAction.id && p.roleId === cbs[i].id;
+                    });
+                    if (exists.length)
+                        cbs[i].checked = true;
+                }
+            },
+            parseRoles: function () {
+                var permArr = [];
                 //parsing roles
+                var readAction = this.accessActions['Read'];
                 var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
                 for (i = 0; i < cbs.length; i++) {
-                    console.log(cbs[i].checked + "-" + cbs[i].id);
+                    if (cbs[i].checked) {
+                        permArr.push({
+                            actionId: readAction.id,
+                            roleId: cbs[i].id
+                        });
+                    }
                 }
-                this.fire('article-save', { title: title, content: content });
+                var updateAction = this.accessActions['Update'];
+                cbs = this.shadowRoot.querySelectorAll("[name^='cbEdit']");
+                for (i = 0; i < cbs.length; i++) {
+                    if (cbs[i].checked) {
+                        permArr.push({
+                            actionId: updateAction.id,
+                            roleId: cbs[i].id
+                        });
+                    }
+                }
+                return permArr;
             }
         });
     </script>

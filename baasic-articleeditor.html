@@ -1,4 +1,29 @@
-﻿<link rel="import" href="../polymer/polymer.html">
+﻿<!--
+Copyright (c) 2014 Mono d.o.o. All rights reserved.
+Code distributed by Mono as a part of the Baasic project
+-->
+
+<!--
+@group Baasic Polymer Article Elements
+
+The `baasic-articleeditor` element provides elementary functionality for editing the content, title and permissions of Baasic articles.
+
+    <baasic-articleeditor
+        auto=false
+        application="webcomponents" 
+        article="{{article}}" slug="{{slug}}"
+        hideSaveButton="true" 
+        on-article-save="{{reload}}></baasic-articleeditor>
+ 
+With `auto` set to `true`, the element fires a GET request fetching the article object automatically.
+The element is by default used with the `baasic-article` element that provides article preview functionality, and is displayed in a `paper-dialog`. 
+To use it stand-alone, set the autoproperty and hideSaveButtons to false.
+
+@element baasic-articleeditor
+@status beta
+@homepage www.baasic.com
+-->
+<link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../baasic-ajax/baasic-ajax.html">
 <link rel="import" href="../baasic-crud/baasic-crud.html">
 <link rel="import" href="../baasic-globals/baasic-globals.html">
@@ -8,8 +33,7 @@
 <link rel="import" href="../paper-checkbox/paper-checkbox.html">
 <link rel="import" href="../core-signals/core-signals.html">
 
-
-<polymer-element name="baasic-articleeditor" attributes="baseUrl version application slug value hideSaveButton">
+<polymer-element name="baasic-articleeditor" attributes="baseUrl version application slug hideSaveButton article auto">
     <template>
         <style>
             :host {
@@ -90,10 +114,69 @@
     </template>
     <script>
         Polymer('baasic-articleeditor', {
-            slug: "",
-            response: {},
-            roles: {},
-            articleExists: true,
+            /**
+             * Fired when the article is saved back to the Baasic system.
+             * 
+             * @event article-save
+             */
+            /**
+             * The URL target of the Baasic service. Can be used with baasic-globals element to set the property for all baasic elements in one place.
+             * 
+             * @attribute baseUrl
+             * @type string
+             * @default ''
+             */
+            baseUrl: '',
+            /**
+             * The versione Baasic service. Can be used with baasic-globals element to set the property for all baasic elements in one place.
+             * 
+             * @attribute version
+             * @type string
+             * @default ''
+             */
+            version: '',
+            /**
+             * The name of the Baasic application, unique per user. Can be used with baasic-globals element to set the property for all baasic elements in one place.
+             * 
+             * @attribute application
+             * @type string
+             * @default ''
+             */
+            application: '',
+            /**
+             * The slug of the article to display. If an article with this slug doesn't exists, it is created automatically.
+             * 
+             * @attribute slug
+             * @type string
+             * @default ''
+             */
+            slug: '',
+            /**
+             * If true, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
+             * 
+             * @attribute hideSaveButton
+             * @type boolean
+             * @default true
+             */
+            hideSaveButton: true,
+            /**
+             * The article object that is editen. Used in conjuction with auto property, and has to be set if auto is set to false.
+             * 
+             * @attribute article
+             * @type Object
+             * @default null
+             */
+            article: null,
+            /**
+             * If true, the element automatically fetches the article from the Baasic service. Set to false if it is used on the same page as the baasic-article element to avoid double GETs.
+             * 
+             * @attribute auto
+             * @type boolean
+             * @default false
+             */
+            auto: false,
+            //roles: {},
+            //articleExists: true,
             ready: function () {
                 this.globals = this.$.globals;
                 if (!this.baseUrl) this.baseUrl = this.globals.config.baseUrl;
@@ -108,22 +191,34 @@
                 this.$.axActions.go();
 
                 this.crud = this.$.crudElement;
-                //get the article
-                this.crud.get({ embed: "Authors,Tags" });
+                //get the article if it is not set via element attribute
+                if (this.auto) {
+                    this.crud.get({ embed: "Authors,Tags" });
+                }
+            },
+            articleChanged: function (oldValue, newValue) {
+                if (newValue)
+                    this.articleExists = true;
+                else
+                    this.articleExists = false;
+                this.setValues();
             },
             loginChanged: function (data) {
                 this.baasicUser = this.globals.baasicUser;
                 this.crud.get({ embed: "Authors,Tags" });
             },
             handleCrudCompleted: function (e) {
-                this.response = e.detail.response;
-                console.log(this.response);
-                if (this.$.container.querySelector('#editor'))
-                    this.$.container.querySelector('#editor').value = this.response.content;
-                if (this.$.container.querySelector('#txtTitle'))
-                    this.$.container.querySelector('#txtTitle').value = this.response.title;
-                this.displayRoles(this.response.permissions);
-
+                this.article = e.detail.response;
+                this.setValues();
+            },
+            setValues: function () {
+                if (this.article) {
+                    if (this.$.container.querySelector('#editor'))
+                        this.$.container.querySelector('#editor').value = this.article.content;
+                    if (this.$.container.querySelector('#txtTitle'))
+                        this.$.container.querySelector('#txtTitle').value = this.article.title;
+                    this.displayRoles(this.article.permissions);
+                }
             },
             handleCrudError: function (e) {
                 this.articleExists = false;
@@ -166,9 +261,25 @@
                 }
                 this.fire('article-save', { title: title, content: content });
             },
+            refresh: function () {
+                this.shadowRoot.getElementById('editor').refresh();
+            },
             displayRoles: function(permissions) {
-                var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
-                var readAction = this.accessActions['Read'];
+                this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
+                this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
+                //var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
+                //var readAction = this.accessActions['Read'];
+                //for (i = 0; i < cbs.length; i++) {
+                //    var exists = permissions.filter(function (p) {
+                //        return p.actionId === readAction.id && p.roleId === cbs[i].id;
+                //    });
+                //    if (exists.length)
+                //        cbs[i].checked = true;
+                //}
+            },
+            setCheckboxes: function (selector, action, permissions) {
+                var cbs = this.shadowRoot.querySelectorAll(selector);
+                var readAction = this.accessActions[action];
                 for (i = 0; i < cbs.length; i++) {
                     var exists = permissions.filter(function (p) {
                         return p.actionId === readAction.id && p.roleId === cbs[i].id;
@@ -179,28 +290,42 @@
             },
             parseRoles: function () {
                 var permArr = [];
-                //parsing roles
-                var readAction = this.accessActions['Read'];
-                var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
-                for (i = 0; i < cbs.length; i++) {
-                    if (cbs[i].checked) {
-                        permArr.push({
-                            actionId: readAction.id,
-                            roleId: cbs[i].id
-                        });
-                    }
-                }
-                var updateAction = this.accessActions['Update'];
-                cbs = this.shadowRoot.querySelectorAll("[name^='cbEdit']");
-                for (i = 0; i < cbs.length; i++) {
-                    if (cbs[i].checked) {
-                        permArr.push({
-                            actionId: updateAction.id,
-                            roleId: cbs[i].id
-                        });
-                    }
-                }
+                this.setPermissions("[name^='cbRead']", 'Read', permArr);
+                this.setPermissions("[name^='cbEdit']", 'Update', permArr);
+
+                //var readAction = this.accessActions['Read'];
+                //var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
+                //for (i = 0; i < cbs.length; i++) {
+                //    if (cbs[i].checked) {
+                //        permArr.push({
+                //            actionId: readAction.id,
+                //            roleId: cbs[i].id
+                //        });
+                //    }
+                //}
+                //var updateAction = this.accessActions['Update'];
+                //cbs = this.shadowRoot.querySelectorAll("[name^='cbEdit']");
+                //for (i = 0; i < cbs.length; i++) {
+                //    if (cbs[i].checked) {
+                //        permArr.push({
+                //            actionId: updateAction.id,
+                //            roleId: cbs[i].id
+                //        });
+                //    }
+                //}
                 return permArr;
+            },
+            setPermissions: function (selector, action, permArr) {
+                var action = this.accessActions[action];
+                var cbs = this.shadowRoot.querySelectorAll(selector);
+                for (i = 0; i < cbs.length; i++) {
+                    if (cbs[i].checked) {
+                        permArr.push({
+                            actionId: action.id,
+                            roleId: cbs[i].id
+                        });
+                    }
+                }
             }
         });
     </script>

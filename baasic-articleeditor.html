@@ -4,7 +4,7 @@ Code distributed by Mono as a part of the Baasic project
 -->
 
 <!--
-@group Baasic Polymer Article Elements
+@group Baasic Polymer Elements
 
 The `baasic-articleeditor` element provides elementary functionality for editing the content, title and permissions of Baasic articles.
 
@@ -191,7 +191,7 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                 this.$.axActions.go();
 
                 this.crud = this.$.crudElement;
-                //get the article if it is not set via element attribute
+                //get the article if it is not set via element article attribute
                 if (this.auto) {
                     this.crud.get({ embed: "Authors,Tags" });
                 }
@@ -267,15 +267,6 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
             displayRoles: function(permissions) {
                 this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
                 this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
-                //var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
-                //var readAction = this.accessActions['Read'];
-                //for (i = 0; i < cbs.length; i++) {
-                //    var exists = permissions.filter(function (p) {
-                //        return p.actionId === readAction.id && p.roleId === cbs[i].id;
-                //    });
-                //    if (exists.length)
-                //        cbs[i].checked = true;
-                //}
             },
             setCheckboxes: function (selector, action, permissions) {
                 var cbs = this.shadowRoot.querySelectorAll(selector);
@@ -292,27 +283,6 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                 var permArr = [];
                 this.setPermissions("[name^='cbRead']", 'Read', permArr);
                 this.setPermissions("[name^='cbEdit']", 'Update', permArr);
-
-                //var readAction = this.accessActions['Read'];
-                //var cbs = this.shadowRoot.querySelectorAll("[name^='cbRead']");
-                //for (i = 0; i < cbs.length; i++) {
-                //    if (cbs[i].checked) {
-                //        permArr.push({
-                //            actionId: readAction.id,
-                //            roleId: cbs[i].id
-                //        });
-                //    }
-                //}
-                //var updateAction = this.accessActions['Update'];
-                //cbs = this.shadowRoot.querySelectorAll("[name^='cbEdit']");
-                //for (i = 0; i < cbs.length; i++) {
-                //    if (cbs[i].checked) {
-                //        permArr.push({
-                //            actionId: updateAction.id,
-                //            roleId: cbs[i].id
-                //        });
-                //    }
-                //}
                 return permArr;
             },
             setPermissions: function (selector, action, permArr) {

@@ -1,6 +1,5 @@
 ﻿{
   "name": "baasic-articleeditor",
-  "version": "0.0.1",
   "dependencies": {
     "polymer": "Polymer/polymer#>=0.3.3",
     "paper-button": "Polymer/paper-button#>=0.3.3",

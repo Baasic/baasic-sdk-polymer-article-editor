@@ -95,22 +95,6 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                      on-get-completed="{{handleCrudCompleted}}"
                      on-get-error="{{handleCrudError}}"></baasic-crud>
 
-        <baasic-ajax id="axRoles"
-                     url="{{baseUrl}}/{{version}}/{{application}}/role/?rpp=100&sort=Name|asc"
-                     handleas="json"
-                     contenttype="application/json"
-                     method="GET"
-                     on-core-response="{{handleGetRolesCompleted}}"
-                     on-core-error="{{handleGetRolesError}}"></baasic-ajax>
-
-        <baasic-ajax id="axActions"
-                     url="{{baseUrl}}/{{version}}/{{application}}/lookup/?embed=accessAction"
-                     handleas="json"
-                     contenttype="application/json"
-                     method="GET"
-                     on-core-response="{{handleGetActionsCompleted}}"
-                     on-core-error="{{handleGetActionsError}}"></baasic-ajax>
-
     </template>
     <script>
         Polymer('baasic-articleeditor', {
@@ -186,9 +170,9 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                 //pick up the user from the local storage
                 this.baasicUser = this.globals.baasicUser;
                 //load all available roles from the system, as they will be shown in checkbox lists
-                this.$.axRoles.go();
+                this.roles = this.globals.roles;
                 //load the access actions
-                this.$.axActions.go();
+                this.setAccessActions();
 
                 this.crud = this.$.crudElement;
                 //get the article if it is not set via element article attribute
@@ -223,21 +207,12 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
             handleCrudError: function (e) {
                 this.articleExists = false;
             },
-            handleGetRolesCompleted: function (e) {
-                this.roles = e.detail.response.item;
-            },
-            handleGetRolesError: function (e) {
-                console.log(e.detail.response);
-            },
-            handleGetActionsCompleted: function (e) {
+            setAccessActions: function () {
                 this.accessActions = {};
-                var actions = e.detail.response.accessAction;
+                var actions = this.globals.actions;
                 for (var i = 0, len = actions.length; i < len; i++) {
                     this.accessActions[actions[i].abrv] = actions[i];
                 }
-            },
-            handleGetActionsError: function (e) {
-                console.log(e.detail.response);
             },
             saveChanges: function (e) {
                 //to retrieve nodes from the light DOM, but present in a child template, put a master div around all templates with ID "container" and use the line below
@@ -249,7 +224,8 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                     allowComments: "false",
                     status: "2",
                     publishDate: new Date(),
-                    slug: String.slugify(title),
+                    //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
+                    slug: this.slug,
                     permissions: this.parseRoles()
                 };
                 var body = JSON.stringify(article);

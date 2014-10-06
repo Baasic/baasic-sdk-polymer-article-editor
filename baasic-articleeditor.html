@@ -17,7 +17,7 @@ The `baasic-articleeditor` element provides elementary functionality for editing
  
 With `auto` set to `true`, the element fires a GET request fetching the article object automatically.
 The element is by default used with the `baasic-article` element that provides article preview functionality, and is displayed in a `paper-dialog`. 
-To use it stand-alone, set the autoproperty and hideSaveButtons to false.
+To use it stand-alone, set the auto property and hideSaveButtons to false.
 
 @element baasic-articleeditor
 @status beta
@@ -45,11 +45,11 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
             }
         </style>
         <div id="container">
-            <template bind if="{{!baasicUser.isAdmin}}">
+            <template bind if="{{!isAdmin}}">
                 You are not allowed to access this section. Please check your login information or contact the administrator to obtain the right credentials.
             </template>
 
-            <template bind if="{{baasicUser.isAdmin}}">
+            <template bind if="{{isAdmin}}">
                 <div id="editorBox" vertical layout>
                     <div>
                         <paper-input id="txtTitle" label="Article title"></paper-input>
@@ -159,6 +159,7 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
              * @default false
              */
             auto: false,
+            isAdmin: false,
             //roles: {},
             //articleExists: true,
             ready: function () {
@@ -167,18 +168,13 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                 if (!this.version) this.version = this.globals.config.version;
                 if (!this.application) this.application = this.globals.config.application;
 
-                //pick up the user from the local storage
-                this.baasicUser = this.globals.baasicUser;
                 //load all available roles from the system, as they will be shown in checkbox lists
                 this.roles = this.globals.roles;
                 //load the access actions
                 this.setAccessActions();
 
                 this.crud = this.$.crudElement;
-                //get the article if it is not set via element article attribute
-                if (this.auto) {
-                    this.crud.get({ embed: "Authors,Tags" });
-                }
+                this.ajaxAndRender();
             },
             articleChanged: function (oldValue, newValue) {
                 if (newValue)
@@ -188,8 +184,15 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                 this.setValues();
             },
             loginChanged: function (data) {
-                this.baasicUser = this.globals.baasicUser;
-                this.crud.get({ embed: "Authors,Tags" });
+                this.ajaxAndRender();
+            },
+            ajaxAndRender: function() {
+                //pick up user rights from the local storage
+                this.isAdmin = this.globals.baasicUser.isAdmin;
+                //get the article if it is not set via element article attribute
+                if (this.auto) {
+                    this.crud.get({ embed: "Authors,Tags" });
+                }
             },
             handleCrudCompleted: function (e) {
                 this.article = e.detail.response;
@@ -222,6 +225,7 @@ To use it stand-alone, set the autoproperty and hideSaveButtons to false.
                     title: title,
                     content: content,
                     allowComments: "false",
+                    //status - published
                     status: "2",
                     publishDate: new Date(),
                     //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario

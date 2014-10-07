@@ -4,11 +4,9 @@
     "polymer": "Polymer/polymer#>=0.3.3",
     "paper-button": "Polymer/paper-button#>=0.3.3",
     "paper-input": "Polymer/paper-input#>=0.3.3",
-    "paper-dialog": "Polymer/paper-dialog#>=0.3.3",
     "paper-checkbox": "Polymer/paper-checkbox#>=0.3.3",
     "core-signals": "Polymer/core-signals#>=0.3.3",
     "baasic-globals": "http://gitserver/monosoftware/baasic-sdk-polymer-core-globals.git#>=0.0.1",
-    "baasic-articleeditor": "http://gitserver/monosoftware/baasic-sdk-polymer-article-editor.git#>=0.0.1",
     "baasic-ajax": "http://gitserver/monosoftware/baasic-sdk-polymer-core-ajax.git#>=0.0.1",
     "baasic-crud": "http://gitserver/monosoftware/baasic-sdk-polymer-core-crud.git#>=0.0.1",
     "baasic-markdowneditor": "http://gitserver/monosoftware/baasic-sdk-polymer-core-markdowneditor.git#>=0.0.1"

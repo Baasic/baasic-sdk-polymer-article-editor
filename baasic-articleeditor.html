@@ -190,7 +190,7 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                 this.isAdmin = this.globals.baasicUser.isAdmin;
                 //get the article if it is not set via element article attribute
                 if (this.auto) {
-                    this.crud.get({ embed: "Authors,Tags" });
+                    this.crud.get({ embed: 'Authors,Tags' });
                 }
             },
             handleCrudCompleted: function (e) {
@@ -222,7 +222,6 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
             },
             saveChanges: function (e) {
                 var content = this.shadowRoot.getElementById('editor').value;
-                //var title = this.$.container.querySelector('#txtTitle').value;
                 var title = this.shadowRoot.getElementById('txtTitle').value;
                 var article = {
                     title: title,

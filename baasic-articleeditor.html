@@ -65,7 +65,7 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                         </div>
                     </template>
                     <div>Who can edit this content?</div>
-                    <template repeat="{{ role in roles }}">
+                    <template id="tplRoles" repeat="{{ role in roles }}">
                         <div horizontal layout>
                             <paper-checkbox name="cbEdit" id="{{role.id}}"></paper-checkbox>
                             <div>{{ role.name }}</div>
@@ -158,27 +158,39 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
              */
             auto: false,
             isAdmin: false,
-            //roles: {},
-            //articleExists: true,
             ready: function () {
                 this.globals = this.$.globals;
                 if (!this.baseUrl) this.baseUrl = this.globals.config.baseUrl;
                 if (!this.version) this.version = this.globals.config.version;
                 if (!this.application) this.application = this.globals.config.application;
 
-                //load all available roles from the system, as they will be shown in checkbox lists
-                this.roles = this.globals.roles;
-                //load the access actions
-                this.setAccessActions();
-
                 this.crud = this.$.crudElement;
+
+                this.loadLookups();
+
                 this.fetchData();
             },
+            loadLookups: function() {
+                _this = this;
+                //load all available roles from the system, as they will be shown in checkbox lists
+                this.globals.roles
+                    .then(function (d) {
+                        _this.roles = d.data;
+                    })
+                    .then(function () {
+                        _this.globals.actions.then(function (d) {
+                            _this.setAccessActions(d.data);
+                            _this.setValues();
+                        });
+                    });
+            },
             articleChanged: function (oldValue, newValue) {
+                //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
                 if (newValue)
                     this.articleExists = true;
                 else
                     this.articleExists = false;
+                //set article content and role checkboxes
                 this.setValues();
             },
             loginChanged: function (data) {
@@ -186,7 +198,6 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                     this.fetchData();
             },
             fetchData: function() {
-                //pick up user rights from the local storage
                 this.isAdmin = this.globals.baasicUser.isAdmin;
                 //get the article if it is not set via element article attribute
                 if (this.auto) {
@@ -195,12 +206,11 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
             },
             handleCrudCompleted: function (e) {
                 this.article = e.detail.response;
-                this.setValues();
             },
             setValues: function () {
                 if (this.article) {
                     if (this.shadowRoot.getElementById('editor'))
-                        //need to set this asynchronously, otherwise it tens to crash the browser and exhibit other strange behavior
+                        //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
                         this.job('setEditorValue', this.setEditorValue, 0);
                     if (this.shadowRoot.getElementById('txtTitle'))
                         this.shadowRoot.getElementById('txtTitle').value = this.article.title;
@@ -213,11 +223,52 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
             handleCrudError: function (e) {
                 this.articleExists = false;
             },
-            setAccessActions: function () {
-                this.accessActions = {};
-                var actions = this.globals.actions;
-                for (var i = 0, len = actions.length; i < len; i++) {
-                    this.accessActions[actions[i].abrv] = actions[i];
+            setAccessActions: function (actions) {
+                //form an associative array of system actions that can be accessed by action abreviation and holds a full action lookup object inside. This is used to quickly retrieve the action object by its abbreviation.
+                if (actions) {
+                    this.accessActions = {};
+                    for (var i = 0, len = actions.length; i < len; i++) {
+                        this.accessActions[actions[i].abrv] = actions[i];
+                    }
+                }
+            },
+            displayRoles: function(permissions) {
+                //set appropriate values of checkboxes based on the permissions from the article object
+                this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
+                this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
+            },
+            setCheckboxes: function (selector, action, permissions) {
+                //loops through all checkboxes and checks them if a role from the permission list matches the ID of a checkbox
+                if (this.accessActions) {
+                    var cbs = this.shadowRoot.querySelectorAll(selector);
+                    var act = this.accessActions[action];
+                    for (i = 0; i < cbs.length; i++) {
+                        var exists = permissions.filter(function (p) {
+                            return p.actionId === act.id && p.roleId === cbs[i].id;
+                        });
+                        if (exists.length)
+                            cbs[i].checked = true;
+                    }
+                }
+            },
+            parseRoles: function () {
+                //retrieves the contents of the checkbox lists on save
+                var permArr = [];
+                this.setPermissions("[name^='cbRead']", 'Read', permArr);
+                this.setPermissions("[name^='cbEdit']", 'Update', permArr);
+                return permArr;
+            },
+            setPermissions: function (selector, action, permArr) {
+                //adds checked roles to the permission array
+                var act = this.accessActions[action];
+                var cbs = this.shadowRoot.querySelectorAll(selector);
+                for (i = 0; i < cbs.length; i++) {
+                    if (cbs[i].checked) {
+                        permArr.push({
+                            actionId: act.id,
+                            roleId: cbs[i].id
+                        });
+                    }
                 }
             },
             saveChanges: function (e) {
@@ -226,9 +277,9 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                 var article = {
                     title: title,
                     content: content,
-                    allowComments: "false",
+                    allowComments: 'false',
                     //status - published
-                    status: "2",
+                    status: '2',
                     publishDate: new Date(),
                     //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
                     slug: this.slug,
@@ -244,40 +295,8 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                 this.fire('article-save', { title: title, content: content });
             },
             refresh: function () {
+                //needed to show the contents of a markdown editor on initial load, without it it would be empty
                 this.shadowRoot.getElementById('editor').refresh();
-            },
-            displayRoles: function(permissions) {
-                this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
-                this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
-            },
-            setCheckboxes: function (selector, action, permissions) {
-                var cbs = this.shadowRoot.querySelectorAll(selector);
-                var readAction = this.accessActions[action];
-                for (i = 0; i < cbs.length; i++) {
-                    var exists = permissions.filter(function (p) {
-                        return p.actionId === readAction.id && p.roleId === cbs[i].id;
-                    });
-                    if (exists.length)
-                        cbs[i].checked = true;
-                }
-            },
-            parseRoles: function () {
-                var permArr = [];
-                this.setPermissions("[name^='cbRead']", 'Read', permArr);
-                this.setPermissions("[name^='cbEdit']", 'Update', permArr);
-                return permArr;
-            },
-            setPermissions: function (selector, action, permArr) {
-                var action = this.accessActions[action];
-                var cbs = this.shadowRoot.querySelectorAll(selector);
-                for (i = 0; i < cbs.length; i++) {
-                    if (cbs[i].checked) {
-                        permArr.push({
-                            actionId: action.id,
-                            roleId: cbs[i].id
-                        });
-                    }
-                }
             }
         });
     </script>

@@ -166,24 +166,33 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                 if (!this.application) this.application = this.globals.config.application;
 
                 this.crud = this.$.crudElement;
-
                 this.loadLookups();
-
                 this.fetchData();
             },
             loadLookups: function() {
-                _this = this;
                 //load all available roles from the system, as they will be shown in checkbox lists
+                //this.globals.roles
+                //    .then(function (d) {
+                //        this.roles = d.data;
+                //    }.bind(this))
+                //    .then(function () {
+                //        this.globals.actions.then(function (d) {
+                //            this.setAccessActions(d.data);
+                //            this.setValues();
+                //        }.bind(this));
+                //    }.bind(this));
+
                 this.globals.roles
                     .then(function (d) {
-                        _this.roles = d.data;
-                    })
-                    .then(function () {
-                        _this.globals.actions.then(function (d) {
-                            _this.setAccessActions(d.data);
-                            _this.setValues();
-                        });
-                    });
+                        this.roles = d.data;
+                        this.setValues();
+                    }.bind(this));
+                this.globals.actions
+                    .then(function (d) {
+                        this.setAccessActions(d.data);
+                        this.setValues();
+                }.bind(this));
+
             },
             articleChanged: function (oldValue, newValue) {
                 //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
@@ -209,7 +218,7 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                 this.article = e.detail.response;
             },
             setValues: function () {
-                if (this.article) {
+                if (this.article && this.roles && this.accessActions) {
                     if (this.shadowRoot.getElementById('editor'))
                         //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
                         this.job('setEditorValue', this.setEditorValue, 0);

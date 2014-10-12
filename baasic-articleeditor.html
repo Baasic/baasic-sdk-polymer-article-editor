@@ -170,18 +170,6 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
                 this.fetchData();
             },
             loadLookups: function() {
-                //load all available roles from the system, as they will be shown in checkbox lists
-                //this.globals.roles
-                //    .then(function (d) {
-                //        this.roles = d.data;
-                //    }.bind(this))
-                //    .then(function () {
-                //        this.globals.actions.then(function (d) {
-                //            this.setAccessActions(d.data);
-                //            this.setValues();
-                //        }.bind(this));
-                //    }.bind(this));
-
                 this.globals.roles
                     .then(function (d) {
                         this.roles = d.data;

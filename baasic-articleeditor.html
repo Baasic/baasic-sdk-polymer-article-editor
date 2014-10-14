@@ -38,10 +38,17 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
         <style>
             :host {
                 display: block;
+                background: #fff;
             }
-
             paper-checkbox {
                 padding: 20px 20px 20px 0;
+            }
+            paper-checkbox + label {
+                padding: 16px 0 0 0;
+            }
+            h1, h2, h3 {
+                font-family: inherit;
+                font-weight: normal;
             }
         </style>
         <template bind if="{{!isAdmin}}">
@@ -49,33 +56,31 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
         </template>
 
         <template bind if="{{isAdmin}}">
-            <div id="editorBox" vertical layout>
-                <div>
-                    <paper-input id="txtTitle" label="Article title"></paper-input>
-                </div>
-                <div>
-                    <baasic-markdowneditor id="editor"></baasic-markdowneditor>
-                </div>
-                <div id="rolesList" vertical layout>
-                    <div>Who can view this content?</div>
-                    <template repeat="{{ role in roles }}">
-                        <div horizontal layout>
-                            <paper-checkbox name="cbRead" id="{{role.id}}"></paper-checkbox>
-                            <div>{{ role.name }}</div>
-                        </div>
-                    </template>
-                    <div>Who can edit this content?</div>
-                    <template id="tplRoles" repeat="{{ role in roles }}">
-                        <div horizontal layout>
-                            <paper-checkbox name="cbEdit" id="{{role.id}}"></paper-checkbox>
-                            <div>{{ role.name }}</div>
-                        </div>
-                    </template>
+            <div id="editorBox">
+                <paper-input id="txtTitle" label="Article title" floatingLabel></paper-input>
+                <baasic-markdowneditor id="editor"></baasic-markdowneditor>
+                <div id="rolesList" horizontal layout>
+                    <div flex one>
+                        <h3>Who can view this content?</h3>
+                        <template repeat="{{ role in roles }}">
+                            <div horizontal layout>
+                                <paper-checkbox name="cbRead" id="{{role.id}}"></paper-checkbox>
+                                <label>{{ role.name }}</label>
+                            </div>
+                        </template>
+                    </div>
+                    <div flex one>
+                        <h3>Who can edit this content?</h3>
+                        <template id="tplRoles" repeat="{{ role in roles }}">
+                            <div horizontal layout>
+                                <paper-checkbox name="cbEdit" id="{{role.id}}"></paper-checkbox>
+                                <label>{{ role.name }}</label>
+                            </div>
+                        </template>
+                    </div>
                 </div>
                 <template bind if="{{!hideSaveButton}}">
-                    <div>
-                        <paper-button on-click="{{saveChanges}}" raised>Save</paper-button>
-                    </div>
+                    <paper-button on-click="{{saveChanges}}">Save</paper-button>
                 </template>
             </div>
         </template>

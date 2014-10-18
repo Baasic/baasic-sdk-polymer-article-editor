@@ -6,14 +6,11 @@
     "paper-input": "Polymer/paper-input#>=0.4.2",
     "paper-checkbox": "Polymer/paper-checkbox#>=0.4.2",
     "core-signals": "Polymer/core-signals#>=0.4.2",
-    "baasic-globals": "http://gitserver/monosoftware/baasic-sdk-polymer-core-globals.git#>=0.0.1",
-    "baasic-ajax": "http://gitserver/monosoftware/baasic-sdk-polymer-core-ajax.git#>=0.0.1",
-    "baasic-crud": "http://gitserver/monosoftware/baasic-sdk-polymer-core-crud.git#>=0.0.1",
-    "baasic-markdowneditor": "http://gitserver/monosoftware/baasic-sdk-polymer-core-markdowneditor.git#>=0.0.1"
+    "baasic-globals":  "Baasic/baasic-sdk-polymer-core-globals#>=0.1.0",
+    "baasic-crud":  "Baasic/baasic-sdk-polymer-core-crud#>=0.1.0",
+    "baasic-ajax": "Baasic/baasic-sdk-polymer-core-ajax#>=0.1.0",
+    "baasic-markdowneditor": "Baasic/baasic-sdk-polymer-core-markdowneditor#>=0.1.0"
   },
-  "authors": [
-    "denis@mono-software.com"
-  ],
   "description": "Baasic article editor Web component.",
   "keywords": [
     "polymer",
@@ -21,10 +18,11 @@
     "baasic",
     "article",
     "editor",
-    "document"
+    "document",
+    "markdown"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/monosoftware/baasic-articleeditor",
+  "homepage": "https://github.com/baasic/baasic-sdk-polymer-article-editor",
   "ignore": [
     "**/.*",
     "node_modules",

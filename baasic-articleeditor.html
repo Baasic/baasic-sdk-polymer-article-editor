@@ -91,10 +91,10 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
         <core-signals on-core-signal-user-login="{{loginChanged}}"></core-signals>
 
         <baasic-crud id="crudElement"
-                     geturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
-                     posturl="{{baseUrl}}/{{version}}/{{application}}/article/"
-                     puturl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
-                     deleteurl="{{baseUrl}}/{{version}}/{{application}}/article/{{slug}}/"
+                     geturl="{{baseUrl}}/{{version}}/{{application}}/articles/{{slug}}/"
+                     posturl="{{baseUrl}}/{{version}}/{{application}}/articles/"
+                     puturl="{{baseUrl}}/{{version}}/{{application}}/articles/{{slug}}/"
+                     deleteurl="{{baseUrl}}/{{version}}/{{application}}/articles/{{slug}}/"
                      on-get-completed="{{handleCrudCompleted}}"
                      on-get-error="{{handleCrudError}}"></baasic-crud>
 

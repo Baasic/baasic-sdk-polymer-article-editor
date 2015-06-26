@@ -1,308 +1,197 @@
 <!--
-Copyright (c) 2014 Mono d.o.o. All rights reserved.
-Code distributed by Mono as a part of the Baasic project
--->
-
-<!--
-@group Baasic Polymer Elements
-
-The `baasic-articleeditor` element provides elementary functionality for editing the content, title and permissions of Baasic articles.
-
-    <baasic-articleeditor
-        auto=false
-        application="webcomponents" 
-        article="{{article}}" slug="{{slug}}"
-        hideSaveButton="true" 
-        on-article-save="{{reload}}></baasic-articleeditor>
- 
-With `auto` set to `true`, the element fires a GET request fetching the article object automatically. `baseUrl`, `version`, and `application` attributes can be set in the globals element for the whole application, and do not have to be set for each individual element.
-The element is by default used with the `baasic-article` element that provides article preview functionality, and is displayed in a `paper-dialog`. 
-To use it stand-alone, set the auto property and hideSaveButtons to false.
-
-@element baasic-articleeditor
-@status beta
-@homepage www.baasic.com
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 <link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../baasic-ajax/baasic-ajax.html">
-<link rel="import" href="../baasic-crud/baasic-crud.html">
-<link rel="import" href="../baasic-globals/baasic-globals.html">
+<link rel="import" href="../baasic-globals/globals-import.html">
+<link rel="import" href="../baasic-globals/config.html">
+<link rel="import" href="../baasic-globals/baasic-ajax.html">
 <link rel="import" href="../baasic-markdowneditor/baasic-markdowneditor.html">
 <link rel="import" href="../paper-input/paper-input.html">
-<link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-checkbox/paper-checkbox.html">
-<link rel="import" href="../core-signals/core-signals.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../iron-signals/iron-signals.html">
 
-<polymer-element name="baasic-articleeditor" attributes="baseUrl version application slug hideSaveButton article auto">
-    <template>
-        <style>
-            :host {
-                display: block;
-                background: #fff;
-            }
-            paper-checkbox {
-                padding: 20px 20px 20px 0;
-            }
-            paper-checkbox + label {
-                padding: 16px 0 0 0;
-            }
-            h1, h2, h3 {
-                font-family: inherit;
-                font-weight: normal;
-            }
-        </style>
-        <template bind if="{{!isAdmin}}">
-            You are not allowed to access this section. Please check your login information or contact the administrator to obtain the right credentials.
-        </template>
+<!--
+An element providing a solution to no problem in particular.
 
-        <template bind if="{{isAdmin}}">
-            <div id="editorBox">
-                <paper-input id="txtTitle" label="Article title" floatingLabel></paper-input>
-                <baasic-markdowneditor id="editor"></baasic-markdowneditor>
-                <div id="rolesList" horizontal layout>
-                    <div flex one>
-                        <h3>Who can view this content?</h3>
-                        <template repeat="{{ role in roles }}">
-                            <div horizontal layout>
-                                <paper-checkbox name="cbRead" id="{{role.id}}"></paper-checkbox>
-                                <label>{{ role.name }}</label>
-                            </div>
-                        </template>
-                    </div>
-                    <div flex one>
-                        <h3>Who can edit this content?</h3>
-                        <template id="tplRoles" repeat="{{ role in roles }}">
-                            <div horizontal layout>
-                                <paper-checkbox name="cbEdit" id="{{role.id}}"></paper-checkbox>
-                                <label>{{ role.name }}</label>
-                            </div>
-                        </template>
-                    </div>
+Example:
+
+    <baasic-articleeditor></baasic-articleeditor>
+
+@demo
+-->
+<dom-module id="baasic-articleeditor">
+
+    <template is="dom-if if="{{isAdmin}}">
+        <div id="editorBox">
+            <paper-input id="txtTitle" label="Article title" floatingLabel></paper-input>
+            <baasic-markdowneditor id="editor"></baasic-markdowneditor>
+            <div id="rolesList" horizontal layout>
+                <div flex one>
+                    <h3>Who can view this content?</h3>
+                    <template is="dom-repeat" items="{{roles}}">
+                        <div horizontal layout>
+                            <paper-checkbox name="cbRead" id="{{item.id}}"></paper-checkbox>
+                            <label>{{item.name}}</label>
+                        </div>
+                    </template>
                 </div>
-                <template bind if="{{!hideSaveButton}}">
-                    <paper-button on-click="{{saveChanges}}">Save</paper-button>
-                </template>
+                <div flex one>
+                    <h3>Who can edit this content?</h3>
+                    <template id="tplRoles" is="dom-repeat" items="{{roles}}">
+                        <div horizontal layout>
+                            <paper-checkbox name="cbEdit" id="{{item.id}}"></paper-checkbox>
+                            <label>{{item.name}}</label>
+                        </div>
+                    </template>
+                </div>
             </div>
-        </template>
-
-
-        <baasic-globals id="globals"></baasic-globals>
-
-        <core-signals on-core-signal-user-login="{{loginChanged}}"></core-signals>
-
-        <baasic-crud id="crudElement"
-                     geturl="{{baseUrl}}/{{version}}/{{application}}/articles/{{slug}}/"
-                     posturl="{{baseUrl}}/{{version}}/{{application}}/articles/"
-                     puturl="{{baseUrl}}/{{version}}/{{application}}/articles/{{slug}}/"
-                     deleteurl="{{baseUrl}}/{{version}}/{{application}}/articles/{{slug}}/"
-                     on-get-completed="{{handleCrudCompleted}}"
-                     on-get-error="{{handleCrudError}}"></baasic-crud>
-
+            <template is="dom-if if="{{!hideSaveButton}}">
+                <paper-button on-click="saveChanges">Save</paper-button>
+            </template>
+        </div>
     </template>
-    <script>
-        Polymer('baasic-articleeditor', {
-            /**
-             * Fired when the article is saved back to the Baasic system.
-             * 
-             * @event article-save
-             */
-            /**
-             * The URL target of the Baasic service. Can be used with baasic-globals element to set the property for all baasic elements in one place.
-             * 
-             * @attribute baseUrl
-             * @type string
-             * @default ''
-             */
-            baseUrl: '',
-            /**
-             * The versione Baasic service. Can be used with baasic-globals element to set the property for all baasic elements in one place.
-             * 
-             * @attribute version
-             * @type string
-             * @default ''
-             */
-            version: '',
-            /**
-             * The name of the Baasic application, unique per user. Can be used with baasic-globals element to set the property for all baasic elements in one place.
-             * 
-             * @attribute application
-             * @type string
-             * @default ''
-             */
-            application: '',
-            /**
-             * The slug of the article to display. If an article with this slug doesn't exists, it is created automatically.
-             * 
-             * @attribute slug
-             * @type string
-             * @default ''
-             */
-            slug: '',
-            /**
-             * If true, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
-             * 
-             * @attribute hideSaveButton
-             * @type boolean
-             * @default true
-             */
-            hideSaveButton: true,
-            /**
-             * The article object that is editen. Used in conjuction with auto property, and has to be set if auto is set to false.
-             * 
-             * @attribute article
-             * @type Object
-             * @default null
-             */
-            article: null,
-            /**
-             * If true, the element automatically fetches the article from the Baasic service. Set to false if it is used on the same page as the baasic-article element to avoid double GETs.
-             * 
-             * @attribute auto
-             * @type boolean
-             * @default false
-             */
-            auto: false,
-            isAdmin: false,
-            articleExists: false,
-            ready: function () {
-                this.globals = this.$.globals;
-                if (!this.baseUrl) this.baseUrl = this.globals.config.baseUrl;
-                if (!this.version) this.version = this.globals.config.version;
-                if (!this.application) this.application = this.globals.config.application;
+     <iron-signals on-iron-signal-user-login="loginChanged"></iron-signals>
+</dom-module>
 
-                this.crud = this.$.crudElement;
-                this.loadLookups();
-                this.fetchData();
-            },
-            loadLookups: function() {
-                this.globals.roles
-                    .then(function (d) {
-                        this.roles = d.data;
-                        this.setValues();
-                    }.bind(this));
-                this.globals.actions
-                    .then(function (d) {
-                        this.setAccessActions(d.data);
-                        this.setValues();
-                }.bind(this));
+<script>
 
-            },
-            articleChanged: function (oldValue, newValue) {
-                //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
-                if (newValue)
-                    this.articleExists = true;
-                else
-                    this.articleExists = false;
-                //set article content and role checkboxes
-                this.setValues();
-            },
-            loginChanged: function (data) {
-                if (this.auto)
-                    this.fetchData();
-            },
-            fetchData: function() {
-                this.isAdmin = this.globals.baasicUser.isAdmin;
-                //get the article if it is not set via element article attribute
-                if (this.auto) {
-                    this.crud.get({ embed: 'Authors,Tags' });
-                }
-            },
-            handleCrudCompleted: function (e) {
-                this.article = e.detail.response;
-            },
-            setValues: function () {
-                if (this.article && this.roles && this.accessActions) {
-                    if (this.shadowRoot.getElementById('editor'))
-                        //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
-                        this.job('setEditorValue', this.setEditorValue, 0);
-                    if (this.shadowRoot.getElementById('txtTitle'))
-                        this.shadowRoot.getElementById('txtTitle').value = this.article.title;
-                    this.displayRoles(this.article.permissions);
-                }
-            },
-            setEditorValue: function () {
-                this.shadowRoot.getElementById('editor').value = this.article.content;
-            },
-            handleCrudError: function (e) {
-                this.articleExists = false;
-            },
-            setAccessActions: function (actions) {
-                //form an associative array of system actions that can be accessed by action abreviation and holds a full action lookup object inside. This is used to quickly retrieve the action object by its abbreviation.
-                if (actions) {
-                    this.accessActions = {};
-                    for (var i = 0, len = actions.length; i < len; i++) {
-                        this.accessActions[actions[i].abrv] = actions[i];
-                    }
-                }
-            },
-            displayRoles: function(permissions) {
-                //set appropriate values of checkboxes based on the permissions from the article object
-                this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
-                this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
-            },
-            setCheckboxes: function (selector, action, permissions) {
-                //loops through all checkboxes and checks them if a role from the permission list matches the ID of a checkbox
-                if (this.accessActions) {
-                    var cbs = this.shadowRoot.querySelectorAll(selector);
-                    var act = this.accessActions[action];
-                    for (i = 0; i < cbs.length; i++) {
-                        var exists = permissions.filter(function (p) {
-                            return p.actionId === act.id && p.roleId === cbs[i].id;
-                        });
-                        if (exists.length)
-                            cbs[i].checked = true;
-                    }
-                }
-            },
-            parseRoles: function () {
-                //retrieves the contents of the checkbox lists on save
-                var permArr = [];
-                this.setPermissions("[name^='cbRead']", 'Read', permArr);
-                this.setPermissions("[name^='cbEdit']", 'Update', permArr);
-                return permArr;
-            },
-            setPermissions: function (selector, action, permArr) {
-                //adds checked roles to the permission array
-                var act = this.accessActions[action];
-                var cbs = this.shadowRoot.querySelectorAll(selector);
-                for (i = 0; i < cbs.length; i++) {
-                    if (cbs[i].checked) {
-                        permArr.push({
-                            actionId: act.id,
-                            roleId: cbs[i].id
-                        });
-                    }
-                }
-            },
-            saveChanges: function (e) {
-                var content = this.shadowRoot.getElementById('editor').value;
-                var title = this.shadowRoot.getElementById('txtTitle').value;
-                var article = {
-                    title: title,
-                    content: content,
-                    allowComments: 'false',
-                    //status - published
-                    status: '2',
-                    publishDate: new Date(),
-                    //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
-                    slug: this.slug,
-                    permissions: this.parseRoles()
-                };
-                var body = JSON.stringify(article);
-                if (this.articleExists)
-                    this.crud.put(null, body);
-                else {
-                    this.crud.post(null, body);
-                    this.articleExists = true;
-                }
-                this.fire('article-save', { title: title, content: content });
-            },
-            refresh: function () {
-                //needed to show the contents of a markdown editor on initial load, without it it would be empty
-                this.shadowRoot.getElementById('editor').refresh();
-            }
-        });
-    </script>
-</polymer-element>
+  Polymer({
 
+    is: 'baasic-articleeditor',
+    behaviors: [Baasic.Ajax, Baasic.Config],
+    properties: {
+        /**
+        * The slug of the article to display. If an article with this slug doesn't exists, it is created automatically.
+        * 
+        * @attribute slug
+        * @type string
+        * @default ''
+        */
+        slug: {
+            type: String,
+            value: '',
+            notify: true
+        },
+        /**
+            * If true, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
+            * 
+            * @attribute hideSaveButton
+            * @type boolean
+            * @default true
+            */
+        hideSaveButton: {
+            type: Boolean,
+            value: true,
+            notify: true
+        },
+        /**
+            * The article object that is editen. Used in conjuction with auto property, and has to be set if auto is set to false.
+            * 
+            * @attribute article
+            * @type Object
+            * @default null
+            */
+        article: {
+            type: Object,
+            value: null,
+            notify: true,
+            observer: 'articleChanged'
+        },
+        /**
+            * If true, the element automatically fetches the article from the Baasic service. Set to false if it is used on the same page as the baasic-article element to avoid double GETs.
+            * 
+            * @attribute auto
+            * @type boolean
+            * @default false
+            */
+        auto: {
+            type: Boolean,
+            value: false,
+            notify: true
+        },
+      
+    },
+    isAdmin: false,
+    articleExists: false,
+    // Element Lifecycle
 
+    ready: function() {
+        this.loadLookups();
+        this.fetchData();
+    },
+
+    loadLookups: function() {
+        Baasic.Ajax.getFromCache(this.baseUrl + '/' + this.version + '/' + this.application + '/roles/?rpp=100&sort=Name|asc', 'baasicRoles', 'item', this.cacheExpiration)
+            .then(function (d) { this.roles = d.data; this.setValues(); }.bind(this))
+            .catch(function (d) { console.log(d) });
+
+        Baasic.Ajax.getFromCache(this.baseUrl + '/' + this.version + '/' + this.application + '/lookups/?embed=accessAction', 'baasicActions', 'accessAction', this.cacheExpiration)
+            .then(function (d) { this.setAccessActions(d.data); this.setValues(); }.bind(this))
+            .catch(function (d) { console.log(d) });
+    },
+    articleChanged: function (newValue, oldValue) {
+        //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
+        if (newValue)
+            this.articleExists = true;
+        else
+            this.articleExists = false;
+        //set article content and role checkboxes
+        this.setValues();
+    },
+
+    attached: function() {
+        // `attached` fires once the element and its parents have been inserted
+        // into a document.
+        //
+        // This is a good place to perform any work related to your element's
+        // visual state or active behavior (measuring sizes, beginning animations,
+        // loading resources, etc).
+    },
+
+    detached: function() {
+        // The analog to `attached`, `detached` fires when the element has been
+        // removed from a document.
+        //
+        // Use this to clean up anything you did in `attached`.
+    },
+
+    // Element Behavior
+
+    /**
+        * The `baasic-articleeditor-lasers` event is fired whenever `fireLasers` is called.
+        *
+        * @event baasic-articleeditor-lasers
+        * @detail {{sound: String}}
+        */
+
+    /**
+        * Sometimes it's just nice to say hi.
+        *
+        * @param {string} greeting A positive greeting.
+        * @return {string} The full greeting.
+        */
+    sayHello: function(greeting) {
+        var response = greeting || 'Hello World!';
+        return 'baasic-articleeditor says, ' + response;
+    },
+
+    /**
+        * Attempts to destroy this element's enemies with an any beam of light!
+        *
+        * Or, at least, dispatches an event in the vain hope that someone else will
+        * do the zapping.
+        */
+    fireLasers: function() {
+        this.fire('baasic-articleeditor-lasers', {sound: 'Pew pew!'});
+    }
+
+  });
+
+</script>

@@ -1,33 +1,29 @@
 {
   "name": "baasic-articleeditor",
-  "dependencies": {
-    "polymer": "Polymer/polymer#>=0.4.2",
-    "paper-button": "Polymer/paper-button#>=0.4.2",
-    "paper-input": "Polymer/paper-input#>=0.4.2",
-    "paper-checkbox": "Polymer/paper-checkbox#>=0.4.2",
-    "core-signals": "Polymer/core-signals#>=0.4.2",
-    "baasic-globals":  "Baasic/baasic-sdk-polymer-core-globals#>=0.1.0",
-    "baasic-crud":  "Baasic/baasic-sdk-polymer-core-crud#>=0.1.0",
-    "baasic-ajax": "Baasic/baasic-sdk-polymer-core-ajax#>=0.1.0",
-    "baasic-markdowneditor": "Baasic/baasic-sdk-polymer-core-markdowneditor#>=0.1.0"
-  },
-  "description": "Baasic article editor Web component.",
-  "keywords": [
-    "polymer",
-    "web-components",
-    "baasic",
-    "article",
-    "editor",
-    "document",
-    "markdown"
+  "version": "1.0.0",
+  "authors": [
+    "Anonymous <anonymous@example.com>"
   ],
-  "license": "MIT",
-  "homepage": "https://github.com/baasic/baasic-sdk-polymer-article-editor",
+  "description": "An element providing a solution to no problem in particular.",
+  "keywords": [
+    "web-component",
+    "web-components",
+    "polymer",
+    "seed"
+  ],
+  "main": "baasic-articleeditor.html",
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/<USERNAME>/seed-element/",
   "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "test",
-    "tests"
-  ]
+    "/.*",
+    "/test/",
+    "/demo/"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.0.0"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+    "web-component-tester": "*"
+  }
 }

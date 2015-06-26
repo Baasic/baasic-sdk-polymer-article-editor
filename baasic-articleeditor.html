@@ -121,18 +121,17 @@ Example:
     isAdmin: false,
     articleExists: false,
     // Element Lifecycle
-
     ready: function() {
         this.loadLookups();
         this.fetchData();
     },
 
     loadLookups: function() {
-        Baasic.Ajax.getFromCache(this.baseUrl + '/' + this.version + '/' + this.application + '/roles/?rpp=100&sort=Name|asc', 'baasicRoles', 'item', this.cacheExpiration)
+        Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'roles/?rpp=100&sort=Name|asc'), 'baasicRoles', 'item', this.cacheExpiration)
             .then(function (d) { this.roles = d.data; this.setValues(); }.bind(this))
             .catch(function (d) { console.log(d) });
 
-        Baasic.Ajax.getFromCache(this.baseUrl + '/' + this.version + '/' + this.application + '/lookups/?embed=accessAction', 'baasicActions', 'accessAction', this.cacheExpiration)
+        Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'lookups/?embed=accessAction'), 'baasicActions', 'accessAction', this.cacheExpiration)
             .then(function (d) { this.setAccessActions(d.data); this.setValues(); }.bind(this))
             .catch(function (d) { console.log(d) });
     },
@@ -145,52 +144,116 @@ Example:
         //set article content and role checkboxes
         this.setValues();
     },
-
-    attached: function() {
-        // `attached` fires once the element and its parents have been inserted
-        // into a document.
-        //
-        // This is a good place to perform any work related to your element's
-        // visual state or active behavior (measuring sizes, beginning animations,
-        // loading resources, etc).
+    loginChanged: function (data) {
+        if (this.auto)
+            this.fetchData();
     },
-
-    detached: function() {
-        // The analog to `attached`, `detached` fires when the element has been
-        // removed from a document.
-        //
-        // Use this to clean up anything you did in `attached`.
+    baasicUser: function() {
+        return Baasic.Cache.getItem('baasicUser') || {};
     },
-
-    // Element Behavior
-
-    /**
-        * The `baasic-articleeditor-lasers` event is fired whenever `fireLasers` is called.
-        *
-        * @event baasic-articleeditor-lasers
-        * @detail {{sound: String}}
-        */
-
-    /**
-        * Sometimes it's just nice to say hi.
-        *
-        * @param {string} greeting A positive greeting.
-        * @return {string} The full greeting.
-        */
-    sayHello: function(greeting) {
-        var response = greeting || 'Hello World!';
-        return 'baasic-articleeditor says, ' + response;
+    fetchData: function () {
+        this.isAdmin = this.baasicUser.isAdmin;
+        //get the article if it is not set via element article attribute
+        if (this.auto) {
+            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/?embed=Author,Tags', this.baseUrl, this.version, this.application, this.slug))
+            .then(this.handleGetCompleted.bind(this))
+            .catch(this.handleGetError.bind(this));
+        }
     },
-
-    /**
-        * Attempts to destroy this element's enemies with an any beam of light!
-        *
-        * Or, at least, dispatches an event in the vain hope that someone else will
-        * do the zapping.
-        */
-    fireLasers: function() {
-        this.fire('baasic-articleeditor-lasers', {sound: 'Pew pew!'});
-    }
+    handleGetCompleted: function (e) {
+        this.article = e.detail.response;
+    },
+    handleGetError: function (e) {
+        this.articleExists = false;
+    },
+    setValues: function () {
+        if (this.article && this.roles && this.accessActions) {
+            if (this.$.editor)
+                //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
+                this.job('setEditorValue', this.setEditorValue, 0);
+            if (this.$.txtTitle)
+                this.$.txtTitle.value = this.article.title;
+            this.displayRoles(this.article.permissions);
+        }
+    },
+    setEditorValue: function () {
+        this.$.editor.value = this.article.content;
+    },
+    setAccessActions: function (actions) {
+        //form an associative array of system actions that can be accessed by action abreviation and holds a full action lookup object inside. This is used to quickly retrieve the action object by its abbreviation.
+        if (actions) {
+            this.accessActions = {};
+            for (var i = 0, len = actions.length; i < len; i++) {
+                this.accessActions[actions[i].abrv] = actions[i];
+            }
+        }
+    },
+    displayRoles: function(permissions) {
+        //set appropriate values of checkboxes based on the permissions from the article object
+        this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
+        this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
+    },
+    setCheckboxes: function (selector, action, permissions) {
+        //loops through all checkboxes and checks them if a role from the permission list matches the ID of a checkbox
+        if (this.accessActions) {
+            var cbs = this.shadowRoot.querySelectorAll(selector);
+            var act = this.accessActions[action];
+            for (i = 0; i < cbs.length; i++) {
+                var exists = permissions.filter(function (p) {
+                    return p.actionId === act.id && p.roleId === cbs[i].id;
+                });
+                if (exists.length)
+                    cbs[i].checked = true;
+            }
+        }
+    },
+    parseRoles: function () {
+        //retrieves the contents of the checkbox lists on save
+        var permArr = [];
+        this.setPermissions("[name^='cbRead']", 'Read', permArr);
+        this.setPermissions("[name^='cbEdit']", 'Update', permArr);
+        return permArr;
+    },
+    setPermissions: function (selector, action, permArr) {
+        //adds checked roles to the permission array
+        var act = this.accessActions[action];
+        var cbs = this.shadowRoot.querySelectorAll(selector);
+        for (i = 0; i < cbs.length; i++) {
+            if (cbs[i].checked) {
+                permArr.push({
+                    actionId: act.id,
+                    roleId: cbs[i].id
+                });
+            }
+        }
+    },
+    saveChanges: function (e) {
+        var content = this.$.editor.value;
+        var title = this.$,txtTitle.value;
+        var article = {
+            title: title,
+            content: content,
+            allowComments: 'false',
+            //status - published
+            status: '2',
+            publishDate: new Date(),
+            //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
+            slug: this.slug,
+            permissions: this.parseRoles()
+        };
+        var body = JSON.stringify(article);
+        if (this.articleExists)
+            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', body);
+        else {
+            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/', this.baseUrl, this.version, this.application), 'POST', body);
+            this.articleExists = true;
+        }
+        this.fire('article-save', { title: title, content: content });
+    },
+    refresh: function () {
+        //needed to show the contents of a markdown editor on initial load, without it it would be empty
+        this.$.editor.refresh();
+    },
 
   });
 

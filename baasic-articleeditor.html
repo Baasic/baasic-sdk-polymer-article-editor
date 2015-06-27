@@ -27,9 +27,8 @@ Example:
 @demo
 -->
 <dom-module id="baasic-articleeditor">
-
-    <template is="dom-if if="{{isAdmin}}">
-        <div id="editorBox">
+    <template id="editorTmp">
+        <div id="editorBox" hidden="{{!isAdmin}}">
             <paper-input id="txtTitle" label="Article title" floatingLabel></paper-input>
             <baasic-markdowneditor id="editor"></baasic-markdowneditor>
             <div id="rolesList" horizontal layout>
@@ -57,7 +56,7 @@ Example:
             </template>
         </div>
     </template>
-     <iron-signals on-iron-signal-user-login="loginChanged"></iron-signals>
+    <iron-signals on-iron-signal-user-login="loginChanged"></iron-signals>
 </dom-module>
 
 <script>
@@ -116,24 +115,31 @@ Example:
             value: false,
             notify: true
         },
+        isAdmin: {
+            type: Boolean,
+            value: false,
+            notify: true
+        }
       
     },
-    isAdmin: false,
     articleExists: false,
     // Element Lifecycle
     ready: function() {
-        this.loadLookups();
-        this.fetchData();
+        this.isAdmin = this.getBaasicUser().isAdmin;
+        if (this.isAdmin) {
+            this.loadLookups();
+            this.fetchData();
+        }
     },
 
     loadLookups: function() {
         Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'roles/?rpp=100&sort=Name|asc'), 'baasicRoles', 'item', this.cacheExpiration)
-            .then(function (d) { this.roles = d.data; this.setValues(); }.bind(this))
-            .catch(function (d) { console.log(d) });
+            .then(function (d) { this.roles = d.data; }.bind(this))
+            .catch(function (d) { console.log('Error while fetching roles: ' + d) });
 
         Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'lookups/?embed=accessAction'), 'baasicActions', 'accessAction', this.cacheExpiration)
-            .then(function (d) { this.setAccessActions(d.data); this.setValues(); }.bind(this))
-            .catch(function (d) { console.log(d) });
+            .then(function (d) { this.setAccessActions(d.data); }.bind(this))
+            .catch(function (d) { console.log('Error while fetching actions: ' + d) });
     },
     articleChanged: function (newValue, oldValue) {
         //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
@@ -142,17 +148,17 @@ Example:
         else
             this.articleExists = false;
         //set article content and role checkboxes
-        this.setValues();
+        if (oldValue != newValue)
+            this.setValues();
     },
     loginChanged: function (data) {
         if (this.auto)
             this.fetchData();
     },
-    baasicUser: function() {
+    getBaasicUser: function() {
         return Baasic.Cache.getItem('baasicUser') || {};
     },
     fetchData: function () {
-        this.isAdmin = this.baasicUser.isAdmin;
         //get the article if it is not set via element article attribute
         if (this.auto) {
             Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/?embed=Author,Tags', this.baseUrl, this.version, this.application, this.slug))
@@ -161,7 +167,7 @@ Example:
         }
     },
     handleGetCompleted: function (e) {
-        this.article = e.detail.response;
+        this.article = e;
     },
     handleGetError: function (e) {
         this.articleExists = false;
@@ -170,9 +176,12 @@ Example:
         if (this.article && this.roles && this.accessActions) {
             if (this.$.editor)
                 //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
-                this.job('setEditorValue', this.setEditorValue, 0);
+                //this.job('setEditorValue', this.setEditorValue, 0);
+                this.setEditorValue();
             if (this.$.txtTitle)
                 this.$.txtTitle.value = this.article.title;
+            //var myroot = Polymer.dom(this.root).querySelector('template#editorTmp');
+            //console.log(this.$$('template#editorTmp#editorBox#txtTitle'));
             this.displayRoles(this.article.permissions);
         }
     },
@@ -229,7 +238,7 @@ Example:
     },
     saveChanges: function (e) {
         var content = this.$.editor.value;
-        var title = this.$,txtTitle.value;
+        var title = this.$.txtTitle.value;
         var article = {
             title: title,
             content: content,

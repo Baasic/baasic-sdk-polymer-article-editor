@@ -51,7 +51,7 @@ Example:
                     </template>
                 </div>
             </div>
-            <template is="dom-if if="{{!hideSaveButton}}">
+            <template is="dom-if" if="{{showSaveButton}}">
                 <paper-button on-click="saveChanges">Save</paper-button>
             </template>
         </div>
@@ -79,15 +79,15 @@ Example:
             notify: true
         },
         /**
-            * If true, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
+            * If false, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
             * 
             * @attribute hideSaveButton
             * @type boolean
             * @default true
             */
-        hideSaveButton: {
+        showSaveButton: {
             type: Boolean,
-            value: true,
+            value: false,
             notify: true
         },
         /**
@@ -143,13 +143,14 @@ Example:
     },
     articleChanged: function (newValue, oldValue) {
         //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
-        if (newValue)
+        if (newValue != null)
             this.articleExists = true;
         else
             this.articleExists = false;
         //set article content and role checkboxes
-        if (oldValue != newValue)
+        if (newValue != null && oldValue != newValue) {
             this.setValues();
+        }
     },
     loginChanged: function (data) {
         if (this.auto)
@@ -205,7 +206,8 @@ Example:
     setCheckboxes: function (selector, action, permissions) {
         //loops through all checkboxes and checks them if a role from the permission list matches the ID of a checkbox
         if (this.accessActions) {
-            var cbs = this.shadowRoot.querySelectorAll(selector);
+            //var cbs = this.shadowRoot.querySelectorAll(selector);
+            var cbs = Polymer.dom(this.root).querySelectorAll(selector);
             var act = this.accessActions[action];
             for (i = 0; i < cbs.length; i++) {
                 var exists = permissions.filter(function (p) {
@@ -226,7 +228,8 @@ Example:
     setPermissions: function (selector, action, permArr) {
         //adds checked roles to the permission array
         var act = this.accessActions[action];
-        var cbs = this.shadowRoot.querySelectorAll(selector);
+        //var cbs = this.shadowRoot.querySelectorAll(selector);
+        var cbs = Polymer.dom(this.root).querySelectorAll(selector);
         for (i = 0; i < cbs.length; i++) {
             if (cbs[i].checked) {
                 permArr.push({

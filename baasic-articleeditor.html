@@ -29,7 +29,7 @@ Example:
 <dom-module id="baasic-articleeditor">
     <template id="editorTmp">
         <div id="editorBox" hidden="{{!isAdmin}}">
-            <paper-input id="txtTitle" label="Article title" floatingLabel></paper-input>
+            <paper-input id="txtTitle" label="Article title" floatinglabel></paper-input>
             <baasic-markdowneditor id="editor"></baasic-markdowneditor>
             <div id="rolesList" horizontal layout>
                 <div flex one>
@@ -55,218 +55,220 @@ Example:
                 <paper-button on-click="saveChanges">Save</paper-button>
             </template>
         </div>
+        <iron-signals on-iron-signal-user-login="loginChanged"></iron-signals>
     </template>
-    <iron-signals on-iron-signal-user-login="loginChanged"></iron-signals>
+
 </dom-module>
 
 <script>
 
-  Polymer({
+    Polymer({
 
-    is: 'baasic-articleeditor',
-    behaviors: [Baasic.Ajax, Baasic.Config],
-    properties: {
-        /**
-        * The slug of the article to display. If an article with this slug doesn't exists, it is created automatically.
-        * 
-        * @attribute slug
-        * @type string
-        * @default ''
-        */
-        slug: {
-            type: String,
-            value: '',
-            notify: true
-        },
-        /**
-            * If false, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
-            * 
-            * @attribute hideSaveButton
-            * @type boolean
-            * @default true
+        is: 'baasic-articleeditor',
+        behaviors: [Baasic.Ajax, Baasic.Config],
+        properties: {
+            /**
+            * The slug of the article to display. If an article with this slug doesn't exists, it is created automatically.
+            *
+            * @attribute slug
+            * @type string
+            * @default ''
             */
-        showSaveButton: {
-            type: Boolean,
-            value: false,
-            notify: true
-        },
-        /**
-            * The article object that is editen. Used in conjuction with auto property, and has to be set if auto is set to false.
-            * 
-            * @attribute article
-            * @type Object
-            * @default null
-            */
-        article: {
-            type: Object,
-            value: null,
-            notify: true,
-            observer: 'articleChanged'
-        },
-        /**
-            * If true, the element automatically fetches the article from the Baasic service. Set to false if it is used on the same page as the baasic-article element to avoid double GETs.
-            * 
-            * @attribute auto
-            * @type boolean
-            * @default false
-            */
-        auto: {
-            type: Boolean,
-            value: false,
-            notify: true
-        },
-        isAdmin: {
-            type: Boolean,
-            value: false,
-            notify: true
-        }
-      
-    },
-    articleExists: false,
-    // Element Lifecycle
-    ready: function() {
-        this.isAdmin = this.getBaasicUser().isAdmin;
-        if (this.isAdmin) {
-            this.loadLookups();
-            this.fetchData();
-        }
-    },
-
-    loadLookups: function() {
-        Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'roles/?rpp=100&sort=Name|asc'), 'baasicRoles', 'item', this.cacheExpiration)
-            .then(function (d) { this.roles = d.data; }.bind(this))
-            .catch(function (d) { console.log('Error while fetching roles: ' + d) });
-
-        Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'lookups/?embed=accessAction'), 'baasicActions', 'accessAction', this.cacheExpiration)
-            .then(function (d) { this.setAccessActions(d.data); }.bind(this))
-            .catch(function (d) { console.log('Error while fetching actions: ' + d) });
-    },
-    articleChanged: function (newValue, oldValue) {
-        //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
-        if (newValue != null)
-            this.articleExists = true;
-        else
-            this.articleExists = false;
-        //set article content and role checkboxes
-        if (newValue != null && oldValue != newValue) {
-            this.setValues();
-        }
-    },
-    loginChanged: function (data) {
-        if (this.auto)
-            this.fetchData();
-    },
-    getBaasicUser: function() {
-        return Baasic.Cache.getItem('baasicUser') || {};
-    },
-    fetchData: function () {
-        //get the article if it is not set via element article attribute
-        if (this.auto) {
-            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/?embed=Author,Tags', this.baseUrl, this.version, this.application, this.slug))
-            .then(this.handleGetCompleted.bind(this))
-            .catch(this.handleGetError.bind(this));
-        }
-    },
-    handleGetCompleted: function (e) {
-        this.article = e;
-    },
-    handleGetError: function (e) {
-        this.articleExists = false;
-    },
-    setValues: function () {
-        if (this.article && this.roles && this.accessActions) {
-            if (this.$.editor)
-                //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
-                //this.job('setEditorValue', this.setEditorValue, 0);
-                this.setEditorValue();
-            if (this.$.txtTitle)
-                this.$.txtTitle.value = this.article.title;
-            //var myroot = Polymer.dom(this.root).querySelector('template#editorTmp');
-            //console.log(this.$$('template#editorTmp#editorBox#txtTitle'));
-            this.displayRoles(this.article.permissions);
-        }
-    },
-    setEditorValue: function () {
-        this.$.editor.value = this.article.content;
-    },
-    setAccessActions: function (actions) {
-        //form an associative array of system actions that can be accessed by action abreviation and holds a full action lookup object inside. This is used to quickly retrieve the action object by its abbreviation.
-        if (actions) {
-            this.accessActions = {};
-            for (var i = 0, len = actions.length; i < len; i++) {
-                this.accessActions[actions[i].abrv] = actions[i];
+            slug: {
+                type: String,
+                value: '',
+                notify: true
+            },
+            /**
+                * If false, hides the editor save button when it is displayed in dialog boxes or popups that has their own save functionality.
+                *
+                * @attribute hideSaveButton
+                * @type boolean
+                * @default true
+                */
+            showSaveButton: {
+                type: Boolean,
+                value: false,
+                notify: true
+            },
+            /**
+                * The article object that is editen. Used in conjuction with auto property, and has to be set if auto is set to false.
+                *
+                * @attribute article
+                * @type Object
+                * @default null
+                */
+            article: {
+                type: Object,
+                value: null,
+                notify: true,
+                observer: 'articleChanged'
+            },
+            /**
+                * If true, the element automatically fetches the article from the Baasic service. Set to false if it is used on the same page as the baasic-article element to avoid double GETs.
+                *
+                * @attribute auto
+                * @type boolean
+                * @default false
+                */
+            auto: {
+                type: Boolean,
+                value: false,
+                notify: true
+            },
+            isAdmin: {
+                type: Boolean,
+                value: false,
+                notify: true
             }
-        }
-    },
-    displayRoles: function(permissions) {
-        //set appropriate values of checkboxes based on the permissions from the article object
-        this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
-        this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
-    },
-    setCheckboxes: function (selector, action, permissions) {
-        //loops through all checkboxes and checks them if a role from the permission list matches the ID of a checkbox
-        if (this.accessActions) {
+
+        },
+        articleExists: false,
+        // Element Lifecycle
+        ready: function () {
+            this.isAdmin = this.getBaasicUser().isAdmin;
+            if (this.isAdmin) {
+                this.loadLookups();
+                this.fetchData();
+            }
+        },
+
+        loadLookups: function () {
+            Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'roles/?rpp=100&sort=Name|asc'), 'baasicRoles', 'item', this.cacheExpiration)
+                .then(function (d) { this.roles = d.data; }.bind(this))
+                .catch(function (d) { console.log('Error while fetching roles: ' + d) });
+
+            Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'lookups/?embed=accessAction'), 'baasicActions', 'accessAction', this.cacheExpiration)
+                .then(function (d) { this.setAccessActions(d.data); }.bind(this))
+                .catch(function (d) { console.log('Error while fetching actions: ' + d) });
+        },
+        articleChanged: function (newValue, oldValue) {
+            //if article does not exist, the element will issue a POST call to create it when Save button is clicked, otherwise a PUT call will be issued to update the existing article
+            if (newValue != null)
+                this.articleExists = true;
+            else
+                this.articleExists = false;
+            //set article content and role checkboxes
+            if (newValue != null && oldValue != newValue) {
+                this.setValues();
+            }
+        },
+        loginChanged: function (data) {
+            this.isAdmin = this.getBaasicUser().isAdmin;
+            this.fetchData();
+        },
+        getBaasicUser: function () {
+            return Baasic.Cache.getItem('baasicUser') || {};
+        },
+        fetchData: function () {
+            //get the article if it is not set via element article attribute
+            if (this.auto) {
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/?embed=Author,Tags', this.baseUrl, this.version, this.application, this.slug))
+                .then(this.handleGetCompleted.bind(this))
+                .catch(this.handleGetError.bind(this));
+            }
+        },
+        handleGetCompleted: function (e) {
+            this.article = e;
+        },
+        handleGetError: function (e) {
+            this.article = null;
+            this.articleExists = false;
+        },
+        setValues: function () {
+            if (this.article && this.roles && this.accessActions) {
+                if (this.$.editor)
+                    //need to set this via this.job, otherwise it tends to crash the browser and exhibit other strange behavior
+                    //this.job('setEditorValue', this.setEditorValue, 0);
+                    this.setEditorValue();
+                if (this.$.txtTitle)
+                    this.$.txtTitle.value = this.article.title;
+                if (this.article.acl != null)
+                    this.displayRoles(this.article.acl);
+            }
+        },
+        setEditorValue: function () {
+            this.$.editor.value = this.article.content;
+        },
+        setAccessActions: function (actions) {
+            //form an associative array of system actions that can be accessed by action abreviation and holds a full action lookup object inside. This is used to quickly retrieve the action object by its abbreviation.
+            if (actions) {
+                this.accessActions = {};
+                for (var i = 0, len = actions.length; i < len; i++) {
+                    this.accessActions[actions[i].abrv] = actions[i];
+                }
+            }
+        },
+        displayRoles: function (permissions) {
+            //set appropriate values of checkboxes based on the permissions from the article object
+            this.setCheckboxes("[name^='cbRead']", 'Read', permissions);
+            this.setCheckboxes("[name^='cbEdit']", 'Update', permissions);
+        },
+        setCheckboxes: function (selector, action, permissions) {
+            //loops through all checkboxes and checks them if a role from the permission list matches the ID of a checkbox
+            if (this.accessActions) {
+                var cbs = Polymer.dom(this.root).querySelectorAll(selector);
+                var act = this.accessActions[action];
+                for (i = 0; i < cbs.length; i++) {
+                    var exists = permissions.filter(function (p) {
+                        return p.actionId === act.id && p.roleId === cbs[i].id;
+                    });
+                    if (exists.length) {
+                        cbs[i].checked = true;
+                    }
+                }
+            }
+        },
+        parseRoles: function () {
+            //retrieves the contents of the checkbox lists on save
+            var permArr = [];
+            this.setPermissions("[name^='cbRead']", 'Read', permArr);
+            this.setPermissions("[name^='cbEdit']", 'Update', permArr);
+            return permArr;
+        },
+        setPermissions: function (selector, action, permArr) {
+            //adds checked roles to the permission array
+            var act = this.accessActions[action];
             //var cbs = this.shadowRoot.querySelectorAll(selector);
             var cbs = Polymer.dom(this.root).querySelectorAll(selector);
-            var act = this.accessActions[action];
             for (i = 0; i < cbs.length; i++) {
-                var exists = permissions.filter(function (p) {
-                    return p.actionId === act.id && p.roleId === cbs[i].id;
-                });
-                if (exists.length)
-                    cbs[i].checked = true;
+                if (cbs[i].checked) {
+                    permArr.push({
+                        actionId: act.id,
+                        roleId: cbs[i].id
+                    });
+                }
             }
-        }
-    },
-    parseRoles: function () {
-        //retrieves the contents of the checkbox lists on save
-        var permArr = [];
-        this.setPermissions("[name^='cbRead']", 'Read', permArr);
-        this.setPermissions("[name^='cbEdit']", 'Update', permArr);
-        return permArr;
-    },
-    setPermissions: function (selector, action, permArr) {
-        //adds checked roles to the permission array
-        var act = this.accessActions[action];
-        //var cbs = this.shadowRoot.querySelectorAll(selector);
-        var cbs = Polymer.dom(this.root).querySelectorAll(selector);
-        for (i = 0; i < cbs.length; i++) {
-            if (cbs[i].checked) {
-                permArr.push({
-                    actionId: act.id,
-                    roleId: cbs[i].id
-                });
+        },
+        saveChanges: function (e) {
+            var content = this.$.editor.value;
+            var title = this.$.txtTitle.value;
+            var article = {
+                title: title,
+                content: content,
+                allowComments: 'false',
+                //status - published
+                status: '2',
+                publishDate: new Date(),
+                //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
+                slug: this.slug,
+                acl: this.parseRoles()
+            };
+            var body = JSON.stringify(article);
+            if (this.articleExists)
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', body);
+            else {
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/', this.baseUrl, this.version, this.application), 'POST', body);
+                this.articleExists = true;
             }
+            this.fire('article-save', { title: title, content: content });
+        },
+        refresh: function () {
+            //needed to show the contents of a markdown editor on initial load, without it it would be empty
+            this.$.editor.refresh();
         }
-    },
-    saveChanges: function (e) {
-        var content = this.$.editor.value;
-        var title = this.$.txtTitle.value;
-        var article = {
-            title: title,
-            content: content,
-            allowComments: 'false',
-            //status - published
-            status: '2',
-            publishDate: new Date(),
-            //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
-            slug: this.slug,
-            permissions: this.parseRoles()
-        };
-        var body = JSON.stringify(article);
-        if (this.articleExists)
-            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', body);
-        else {
-            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/', this.baseUrl, this.version, this.application), 'POST', body);
-            this.articleExists = true;
-        }
-        this.fire('article-save', { title: title, content: content });
-    },
-    refresh: function () {
-        //needed to show the contents of a markdown editor on initial load, without it it would be empty
-        this.$.editor.refresh();
-    },
 
-  });
+
+    });
 
 </script>

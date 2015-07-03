@@ -170,10 +170,21 @@ Example:
         },
         handleGetCompleted: function (e) {
             this.article = e;
+            Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/acl', this.baseUrl, this.version, this.application, this.article.id))
+                .then(this.handleAclCompleted.bind(this))
+                .catch(this.handleAclError.bind(this));
         },
         handleGetError: function (e) {
             this.article = null;
             this.articleExists = false;
+        },
+        handleAclCompleted: function (e) {
+            this.article.acl = e;
+            if (this.article.acl != null)
+                this.displayRoles(this.article.acl);
+        },
+        handleAclError: function (e) {
+            
         },
         setValues: function () {
             if (this.article && this.roles && this.accessActions) {
@@ -251,14 +262,17 @@ Example:
                 status: '2',
                 publishDate: new Date(),
                 //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
-                slug: this.slug,
-                acl: this.parseRoles()
+                slug: this.slug
+                //acl: this.parseRoles()
             };
-            var body = JSON.stringify(article);
-            if (this.articleExists)
-                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', body);
+            //var body = JSON.stringify(article);
+            if (this.articleExists) {
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', JSON.stringify(article));
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/acl', this.baseUrl, this.version, this.application, this.article.id), 'PUT', JSON.stringify(this.parseRoles()));
+            }
             else {
-                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/', this.baseUrl, this.version, this.application), 'POST', body);
+                article.acl = this.parseRoles();
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/', this.baseUrl, this.version, this.application), 'POST', JSON.stringify(article));
                 this.articleExists = true;
             }
             this.fire('article-save', { title: title, content: content });

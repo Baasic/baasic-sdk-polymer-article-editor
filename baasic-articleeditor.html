@@ -126,13 +126,15 @@ Example:
         articleExists: false,
         // Element Lifecycle
         ready: function () {
+            this.doInit();
+        },
+        doInit: function() {
             this.isAdmin = this.getBaasicUser().isAdmin;
             if (this.isAdmin) {
                 this.loadLookups();
                 this.fetchData();
             }
         },
-
         loadLookups: function () {
             Baasic.Ajax.getFromCache(String.format('{0}/{1}/{2}/{3}', this.baseUrl, this.version, this.application, 'roles/?rpp=100&sort=Name|asc'), 'baasicRoles', 'item', this.cacheExpiration)
                 .then(function (d) { this.roles = d.data; }.bind(this))
@@ -154,8 +156,7 @@ Example:
             }
         },
         loginChanged: function (data) {
-            this.isAdmin = this.getBaasicUser().isAdmin;
-            this.fetchData();
+            this.doInit();
         },
         getBaasicUser: function () {
             return Baasic.Cache.getItem('baasicUser') || {};
@@ -184,7 +185,7 @@ Example:
                 this.displayRoles(this.article.acl);
         },
         handleAclError: function (e) {
-            
+            console.log('Error while setting acl: ' + e)
         },
         setValues: function () {
             if (this.article && this.roles && this.accessActions) {
@@ -263,15 +264,17 @@ Example:
                 publishDate: new Date(),
                 //dynamic alternative would be slug: String.slugify(title), but let's stick to simpler scneario
                 slug: this.slug
-                //acl: this.parseRoles()
             };
-            //var body = JSON.stringify(article);
+            var roles = this.parseRoles();
             if (this.articleExists) {
-                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', JSON.stringify(article));
-                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/acl', this.baseUrl, this.version, this.application, this.article.id), 'PUT', JSON.stringify(this.parseRoles()));
+                //issue two PUT requests in succession, one to update the article, another to update its ACLs
+                Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/', this.baseUrl, this.version, this.application, this.slug), 'PUT', JSON.stringify(article))
+                .then(function (e) { Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/{3}/acl', this.baseUrl, this.version, this.application, this.article.id), 'PUT', JSON.stringify(roles)); }.bind(this))
+                .catch(function (err) { console.log('Error updating article' + err); });
             }
             else {
-                article.acl = this.parseRoles();
+                //new request, ACLs can be embedded in the initial POST
+                article.acl = roles;
                 Baasic.Ajax.go(String.format('{0}/{1}/{2}/articles/', this.baseUrl, this.version, this.application), 'POST', JSON.stringify(article));
                 this.articleExists = true;
             }

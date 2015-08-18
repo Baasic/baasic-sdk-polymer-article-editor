@@ -1,9 +1,6 @@
 <!--
 @license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Copyright (c) 2015 Mono d.o.o. All rights reserved.
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
@@ -132,7 +129,6 @@ To use it stand-alone, set the auto property and hideSaveButtons to false.
         * Initializes the element, loads lookups and fetches article content and other attributes.
         */
         _doInit: function () {
-            //this.isAdmin = this.getBaasicUser().isAdmin;
             this._setIsAdmin(this._getBaasicUser().isAdmin);
             if (this.isAdmin) {
                 this.loadLookups();
